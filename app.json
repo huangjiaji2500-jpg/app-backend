@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "USDT Trading App",
+    "slug": "usdt-trading-app",
+    "scheme": "usdtapp",
+  "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": null,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {},
+    "extra": {
+      "remoteBaseUrl": "",
+      "syncSecret": "",
+      "cloudEnabled": true
+    }
+  }
+}
