@@ -1,7 +1,6 @@
-// Vercel Serverless Function: /api/sync
-// 说明：部署到 Vercel 后，本文件下的导出函数自动成为 HTTPS 端点。
-// 路径示例：https://<your-vercel-domain>/api/sync/order 或 /api/sync/deposit
-// 免费层足够使用。此函数做简单签名与时间戳校验，写入内存（演示），可升级到持久数据库。
+// Vercel Serverless Function (catch-all): /api/sync/*
+// 说明：用于处理 /api/sync/list、/api/sync/order、/api/sync/deposit 等子路径，
+// 以便通过浏览器直接访问 /api/sync/list 进行“签名错误”验证。
 
 let MEMORY = { orders: [], deposits: [] };
 let mongoCached = null;
@@ -45,7 +44,7 @@ module.exports = async (req, res) => {
     if (url.startsWith('/api/sync/list')) {
       const tsStr = (req.headers['x-ts']||'').toString();
       const ts = Number(tsStr);
-      // 为了支持在浏览器直接打开进行人工验证（无请求头），这里将缺失/失效时间戳也统一视为签名错误
+      // 浏览器直接打开无请求头时，统一返回签名错误，便于人工验证
       if (!ts || Math.abs(Date.now() - ts) > MAX_SKEW_MS) {
         return json(res, 403, { error:'bad_signature', message:'签名错误' });
       }
