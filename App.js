@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -7,9 +7,11 @@ import { store } from './src/store/store';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { I18nProvider } from './src/context/I18nContext';
 import { useI18n } from './src/context/I18nContext';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text, TouchableOpacity, Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { loadAuthToken } from './src/services/auth';
 import ErrorBoundary from './src/components/ErrorBoundary';
+// expo-updates 在 Expo Go 下不可用；使用动态导入以避免开发期崩溃
 
 // 导入页面组件
 import TradingHall from './src/screens/TradingHall';
@@ -42,6 +44,7 @@ import Recharge from './src/screens/Recharge';
 import AdminDepositsReview from './src/screens/AdminDepositsReview';
 import AdminOrderDetail from './src/screens/AdminOrderDetail';
 import BackupRestore from './src/screens/BackupRestore';
+import ForcePasswordChange from './src/screens/ForcePasswordChange';
 
 // 导入图标
 import { Ionicons } from '@expo/vector-icons';
@@ -89,9 +92,31 @@ function MainTabs() {
   );
 }
 
+function UpdateBanner({ status, onReload, errorMessage }) {
+  // 临时紧急修复：立即隐藏所有更新提示（由发布渠道或原生重构后再恢复）
+  // 如果你需要恢复展示，请移除下面这行或改为更细粒度的判断。
+  return null;
+  const styleBase = { position:'absolute', top:0, left:0, right:0, padding:10, zIndex:999, alignItems:'center' };
+  if (status === 'checking') return <View style={{ ...styleBase, backgroundColor:'#1976D2' }}><View><ActivityIndicator color='#fff' /></View></View>;
+  if (status === 'downloading') return <View style={{ ...styleBase, backgroundColor:'#0288D1' }}><Text style={{ color:'#fff' }}>下载更新中…</Text></View>;
+  if (status === 'downloaded') return <View style={{ ...styleBase, backgroundColor:'#2E7D32' }}><TouchableOpacity onPress={onReload}><Text style={{ color:'#fff', fontWeight:'600' }}>新版本已就绪，点击重启</Text></TouchableOpacity></View>;
+  if (status === 'error') return (
+    <View style={{ ...styleBase, backgroundColor:'#E53935' }}>
+      <Text style={{ color:'#fff', fontWeight:'600' }}>更新失败，稍后重试</Text>
+      {errorMessage ? (
+        <Text style={{ color:'#fff', marginTop:6, fontSize:12, lineHeight:16 }}>{errorMessage}</Text>
+      ) : null}
+    </View>
+  );
+  return null;
+}
+
 export default function App() {
   const [booting, setBooting] = useState(true);
   const [hasToken, setHasToken] = useState(false);
+  const [updateStatus, setUpdateStatus] = useState(null); // null|checking|downloading|downloaded|error
+  const [lastUpdateFailAt, setLastUpdateFailAt] = useState(null);
+  const [updateError, setUpdateError] = useState(null);
 
   useEffect(() => {
     const init = async () => {
@@ -99,8 +124,60 @@ export default function App() {
       const token = global.__AUTH_TOKEN__;
       setHasToken(!!token);
       setBooting(false);
+      // 热更新检测（节流：失败后 10 分钟内不再重复）
+      const now = Date.now();
+      if (lastUpdateFailAt && (now - lastUpdateFailAt) < 10*60*1000) return;
+      // 如果在 Expo Go/guest 环境中，不运行热更新逻辑以避免开发期误报
+      try {
+        if (Constants && (Constants.appOwnership === 'expo' || Constants.appOwnership === 'guest')) {
+          setUpdateStatus(null);
+          return;
+        }
+      } catch (e) {
+        // ignore and continue to attempt dynamic import in unknown environments
+      }
+      try {
+        // 动态导入避免在 Expo Go 环境崩溃
+        const Updates = await import('expo-updates');
+        setUpdateStatus('checking');
+        setUpdateError(null);
+        const res = await Updates.checkForUpdateAsync();
+        if (res.isAvailable) {
+          setUpdateStatus('downloading');
+          await Updates.fetchUpdateAsync();
+          setUpdateStatus('downloaded');
+        } else {
+          setUpdateStatus(null); // 没有新版本
+        }
+      } catch (e){
+        const msg = e && (e.message || String(e));
+        // Suppress the known development-build rejection from expo-updates
+        // (e.g., "Updates.checkForUpdateAsync() is not supported in development builds.")
+        if (msg && msg.toLowerCase().includes('not supported in development builds')) {
+          // treat as no-op in development builds: don't show error banner and avoid noisy error logs
+          console.debug('expo-updates check skipped in development build:', msg);
+          setUpdateStatus(null);
+          setUpdateError(null);
+          setLastUpdateFailAt(Date.now());
+          return;
+        }
+        // For production/runtime errors, avoid showing a blocking red overlay to users.
+        // Log the error for diagnostics but keep the UI usable. Store error text for optional
+        // debugging but do not set status='error' which triggers the red full-width banner.
+        console.warn('expo-updates check failed (non-fatal):', e);
+        setUpdateStatus(null); // keep app usable, no blocking banner
+        setUpdateError(msg + (e.stack ? '\n' + e.stack : ''));
+        setLastUpdateFailAt(Date.now());
+      }
     };
     init();
+  }, [lastUpdateFailAt]);
+
+  const handleReload = useCallback(async ()=>{
+    try {
+      const Updates = await import('expo-updates');
+      await Updates.reloadAsync();
+    } catch {}
   }, []);
 
   return (
@@ -109,6 +186,7 @@ export default function App() {
         <ThemeProvider>
           <ErrorBoundary>
             <NavigationContainer>
+              <UpdateBanner status={updateStatus} onReload={handleReload} errorMessage={updateError} />
             {booting ? (
               <View style={{ flex:1, alignItems:'center', justifyContent:'center' }}>
                 <ActivityIndicator size="large" color="#2196F3" />
@@ -124,12 +202,8 @@ export default function App() {
   );
 }
 
-import { isCurrentUserAdmin } from './src/services/auth';
-
 function RootStack({ hasToken }) {
   const { t } = useI18n();
-  const [isAdmin, setIsAdmin] = React.useState(false);
-  React.useEffect(() => { (async ()=>{ setIsAdmin(await isCurrentUserAdmin()); })(); }, []);
   return (
     <Stack.Navigator initialRouteName={hasToken ? 'MainTabs' : 'Login'}>
       <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
@@ -147,13 +221,9 @@ function RootStack({ hasToken }) {
   <Stack.Screen name="BackupRestore" component={BackupRestore} options={{ title: t('backup_restore') }} />
       <Stack.Screen name="InviteRewards" component={InviteRewards} options={{ title: t('grid_invite_rewards') }} />
       <Stack.Screen name="CommissionDetails" component={CommissionDetails} options={{ title: t('commission_details') || '返佣明细' }} />
-      {isAdmin ? (
-        <>
-          <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ title: t('admin_dashboard') || '管理面板' }} />
-          <Stack.Screen name="AdminDepositsReview" component={AdminDepositsReview} options={{ title: t('deposits_review') || '充值审核' }} />
-          <Stack.Screen name="AdminOrderDetail" component={AdminOrderDetail} options={{ title: t('order_detail') || '订单详情' }} />
-        </>
-      ) : null}
+      <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ title: t('admin_dashboard') || '管理面板' }} />
+      <Stack.Screen name="AdminDepositsReview" component={AdminDepositsReview} options={{ title: t('deposits_review') || '充值审核' }} />
+      <Stack.Screen name="AdminOrderDetail" component={AdminOrderDetail} options={{ title: t('order_detail') || '订单详情' }} />
       {/* 管理员解锁页不在正常导航中暴露，保留代码但默认不注册；如需手动启用可将其放入条件 */}
       <Stack.Screen name="LanguageSettings" component={LanguageSettings} options={{ title: t('grid_language_settings') }} />
   <Stack.Screen name="PaymentMethodAdd" component={PaymentMethodAdd} options={{ title: t('add_payment_method') || '添加收款方式' }} />
@@ -163,6 +233,7 @@ function RootStack({ hasToken }) {
     {/* Admin routes injected conditionally above */}
       <Stack.Screen name="OrderDetail" component={OrderDetail} options={{ title: t('order_detail') || '订单详情' }} />
       <Stack.Screen name="OrderCreate" component={OrderCreate} options={{ title: t('order_create') || '创建订单' }} />
+      <Stack.Screen name="ForcePasswordChange" component={ForcePasswordChange} options={{ title: t('force_change_password_title') || '修改临时密码' }} />
     </Stack.Navigator>
   );
 }
