@@ -43,7 +43,6 @@ import PaymentMethodEdit from './src/screens/PaymentMethodEdit';
 import Recharge from './src/screens/Recharge';
 import AdminDepositsReview from './src/screens/AdminDepositsReview';
 import AdminOrderDetail from './src/screens/AdminOrderDetail';
-import BackupRestore from './src/screens/BackupRestore';
 import ForcePasswordChange from './src/screens/ForcePasswordChange';
 
 // 导入图标
@@ -218,7 +217,6 @@ function RootStack({ hasToken }) {
       <Stack.Screen name="TransferRecords" component={TransferRecords} options={{ title: t('grid_transfer_records') }} />
       <Stack.Screen name="ContactUs" component={ContactUs} options={{ title: t('grid_contact_us') }} />
       <Stack.Screen name="AboutUs" component={AboutUs} options={{ title: t('grid_about_us') }} />
-  <Stack.Screen name="BackupRestore" component={BackupRestore} options={{ title: t('backup_restore') }} />
       <Stack.Screen name="InviteRewards" component={InviteRewards} options={{ title: t('grid_invite_rewards') }} />
       <Stack.Screen name="CommissionDetails" component={CommissionDetails} options={{ title: t('commission_details') || '返佣明细' }} />
       <Stack.Screen name="AdminDashboard" component={AdminDashboard} options={{ title: t('admin_dashboard') || '管理面板' }} />

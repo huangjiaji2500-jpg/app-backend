@@ -1,17 +1,23 @@
 {
   "expo": {
-    "name": "USDT Trading App",
+    "name": "Uπ",
     "slug": "usdt-trading-app",
     "scheme": "usdtapp",
-  "version": "1.0.1",
+    "version": "1.0.1",
     "orientation": "portrait",
-    "icon": null,
+    "icon": "assets/icon.png",
     "splash": {
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/4ebe48a7-29a8-4c8d-92c6-5a91559dfe5c"
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -22,13 +28,17 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "package": "com.huangjiaji2500.usdttradingapp"
     },
     "web": {},
     "extra": {
-      "remoteBaseUrl": "",
-      "syncSecret": "",
-      "cloudEnabled": true
+      "remoteBaseUrl": "https://app-tau-gilt-23.vercel.app",
+      "syncSecret": "huangjiaji199011280016",
+      "cloudEnabled": true,
+      "eas": {
+        "projectId": "4ebe48a7-29a8-4c8d-92c6-5a91559dfe5c"
+      }
     }
   }
 }

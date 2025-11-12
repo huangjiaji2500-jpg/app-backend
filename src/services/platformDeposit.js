@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isCurrentUserAdmin } from './auth';
+import { queuePlatformDepositSync } from './remoteSync';
 
 const KEY_PLATFORM_DEPOSIT = 'PLATFORM_DEPOSIT_CONFIG';
 
@@ -19,5 +20,6 @@ export async function savePlatformDepositAddress({ address, qrImage, note }) {
   if (!isAdmin) throw new Error('not_admin');
   const payload = { address: address || '', qrImage: qrImage || '', note: note || '', updatedAt: Date.now() };
   await AsyncStorage.setItem(KEY_PLATFORM_DEPOSIT, JSON.stringify(payload));
+  try { await queuePlatformDepositSync(payload); } catch {}
   return payload;
 }

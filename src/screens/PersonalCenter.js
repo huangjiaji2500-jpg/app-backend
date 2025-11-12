@@ -10,7 +10,7 @@ import { useI18n } from '../context/I18nContext';
 
 function buildGrid(t, isAdmin){
   const items = [
-    { key: t('grid_rate_settings'), icon: 'cash-outline', route: 'RateSettings' },
+    // 按需求：汇率设置仅在后台出现，这里不再展示
     { key: t('grid_language_settings'), icon: 'globe-outline', route: 'LanguageSettings' },
     { key: t('grid_my_team'), icon: 'people-outline', route: 'Team' },
     // 支付方式管理仅普通用户可见
@@ -23,8 +23,7 @@ function buildGrid(t, isAdmin){
     { key: t('grid_contact_us'), icon: 'call-outline', route: 'ContactUs' },
     { key: t('grid_faq'), icon: 'help-circle-outline', route: '资讯中心' },
     { key: t('grid_about_us'), icon: 'information-circle-outline', route: 'AboutUs' },
-    { key: t('recharge'), icon: 'add-circle-outline', route: 'Recharge' },
-    { key: t('backup_restore'), icon: 'cloud-upload-outline', route: 'BackupRestore' },
+  { key: t('recharge'), icon: 'add-circle-outline', route: 'Recharge' },
   ];
   return items;
 }

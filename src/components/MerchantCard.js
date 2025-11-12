@@ -16,9 +16,12 @@ export default function MerchantCard({ item, onSell }) {
   const [platformMin, setPlatformMin] = React.useState(DEFAULT_PLATFORM_CONFIG.minOrderAmount);
   React.useEffect(()=>{ (async ()=>{
     try {
-      // 单价改为显示“平台兑换比例”中的当前币种值（即 1 USDT = X 本地币），不再展示商家溢价
-      const disp = await getDisplayRates();
-      const localValue = disp[currency] || 0; // 1 USDT = localValue [currency]
+  // 单价展示：使用平台“展示比例”中该币种对应的值（管理员在后台设置的值）
+  // 早期实现对 USD 做了归一化（disp[currency]/disp.USD），会在 disp.USD != 1 时把数值放大，
+  // 导致管理员在界面设置 CNY=9 时显示为 11.25（当 disp.USD=0.8 时）。
+  // 为符合管理员直观期望（输入 9 即显示 9），这里直接使用 disp[currency] 作为 1 USDT 对应的本地币值。
+  const disp = await getDisplayRates();
+  const localValue = disp[currency] || 0;
       setPriceDisplay(formatLocalCurrency(localValue, currency));
       setRawUsdPrice(Number(item.unitPrice||0));
     } catch { setPriceDisplay(formatLocalCurrency(0, currency)); }

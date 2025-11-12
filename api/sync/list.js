@@ -4,7 +4,8 @@
 
 const MAX_SKEW_MS = 120000;
 function sha256(str){ const crypto = require('crypto'); return crypto.createHash('sha256').update(str).digest('hex'); }
-let MEMORY = { orders: [], deposits: [], users: [], rates: [], paymentMethods: [], platformDeposit: null };
+// Shared in-memory fallback (shared module so multiple routes in same process see same data)
+const MEMORY = require('../../lib/inmemory');
 let mongoCached = null;
 async function getMongo(){
   if (mongoCached) return mongoCached;

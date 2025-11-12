@@ -23,8 +23,13 @@ export default function Login({ navigation }) {
     }
     setLoading(true);
     try {
-      await loginWithUsernamePassword({ username, password });
-      navigation.replace('MainTabs');
+      const res = await loginWithUsernamePassword({ username, password });
+      if (res?.mustChangePassword) {
+        Alert.alert(t('alert_title'), t('must_change_password_note') || '密码已被管理员重置，请先修改。');
+        navigation.replace('ForcePasswordChange');
+      } else {
+        navigation.replace('MainTabs');
+      }
     } catch (e) {
       Alert.alert(t('login_failed') || '登录失败', e.message || t('login_failed_desc') || '请检查用户名或密码');
     } finally {

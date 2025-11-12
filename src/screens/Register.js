@@ -3,13 +3,16 @@ import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet } from 'reac
 import PrimaryButton from '../components/ui/PrimaryButton';
 import { useTheme } from '../context/ThemeContext';
 import { checkUsernameAvailable, registerWithUsernamePassword } from '../services/auth';
+import { useI18n } from '../context/I18nContext';
 
 export default function Register({ navigation, route }) {
   const { colors, borderRadius } = useTheme();
+  const { t } = useI18n();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState(route?.params?.inviteCode || '');
   const [usernameHint, setUsernameHint] = useState('');
+  const [usernameStatus, setUsernameStatus] = useState(null);
   const [passwordHint, setPasswordHint] = useState('');
   const [loading, setLoading] = useState(false);
   const timerRef = useRef(null);
@@ -17,71 +20,82 @@ export default function Register({ navigation, route }) {
   const onUsernameChange = (v) => {
     setUsername(v);
     setUsernameHint('');
+    setUsernameStatus(null);
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
       if (!/^[A-Za-z0-9_]{4,20}$/.test(v)) {
-        setUsernameHint('仅字母/数字/下划线，4-20位');
+        setUsernameHint(t('username_rules_hint'));
+        setUsernameStatus('error');
         return;
       }
       try {
         const ok = await checkUsernameAvailable(v);
-        setUsernameHint(ok ? '用户名可用' : '用户名已被占用');
+        setUsernameHint(ok ? t('username_available') : t('username_taken'));
+        setUsernameStatus(ok ? 'success' : 'error');
       } catch {}
     }, 400);
   };
 
   const onPasswordChange = (v) => {
     setPassword(v);
-    if (!/^(?=.*[A-Za-z])(?=.*\d).{6,}$/.test(v)) setPasswordHint('密码需≥6位，含字母+数字');
+    if (!/^(?=.*[A-Za-z])(?=.*\d).{6,}$/.test(v)) setPasswordHint(t('password_rules_hint'));
     else setPasswordHint('');
   };
 
   const onSubmit = async () => {
-    if (usernameHint === '用户名已被占用') {
-      Alert.alert('提示', '用户名已被占用');
+    if (usernameStatus === 'error' && usernameHint) {
+      Alert.alert(t('alert_title'), usernameHint);
       return;
     }
     if (!/^[A-Za-z0-9_]{4,20}$/.test(username)) {
-      Alert.alert('提示', '用户名格式不正确');
+      Alert.alert(t('alert_title'), t('username_invalid'));
       return;
     }
     if (!/^(?=.*[A-Za-z])(?=.*\d).{6,}$/.test(password)) {
-      Alert.alert('提示', '密码需≥6位，含字母+数字');
+      Alert.alert(t('alert_title'), t('password_invalid'));
       return;
     }
 
     setLoading(true);
     try {
       await registerWithUsernamePassword({ username, password, inviteCode });
-      Alert.alert('注册成功', '已自动登录', [{ text: '进入首页', onPress: () => navigation.replace('MainTabs') }]);
+      Alert.alert(t('register_success_title'), t('register_auto_login_desc'), [{ text: t('enter_home'), onPress: () => navigation.replace('MainTabs') }]);
     } catch (e) {
-      Alert.alert('失败', e.message || '注册失败');
+      Alert.alert(t('error'), e.message || t('register_failed'));
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      <Text style={{ fontSize: 20, fontWeight: '700' }}>注册</Text>
+      <Text style={{ fontSize: 20, fontWeight: '700' }}>{t('register_title')}</Text>
       <View style={{ marginTop: 16 }}>
-        <Text>用户名</Text>
+        <Text>{t('username_label')}</Text>
         <TextInput
           value={username}
           onChangeText={onUsernameChange}
-          placeholder="4-20位，仅字母数字下划线"
+          placeholder={t('username_placeholder')}
           autoCapitalize="none"
           style={[styles.input, { borderColor: colors.border, borderRadius: borderRadius.md }]}
         />
-        {!!usernameHint && <Text style={{ marginTop: 6, color: usernameHint.includes('可用') ? '#4CAF50' : '#E53935' }}>{usernameHint}</Text>}
+        {!!usernameHint && (
+          <Text style={{ marginTop: 6, color: usernameStatus === 'success' ? '#4CAF50' : '#E53935' }}>{usernameHint}</Text>
+        )}
       </View>
 
       <View style={{ marginTop: 12 }}>
-        <Text>密码</Text>
+        <Text>{t('password_label')}</Text>
         <TextInput
           value={password}
           onChangeText={onPasswordChange}
-          placeholder="至少6位，含字母+数字"
+          placeholder={t('password_placeholder')}
           secureTextEntry
           style={[styles.input, { borderColor: colors.border, borderRadius: borderRadius.md }]}
         />
@@ -89,22 +103,22 @@ export default function Register({ navigation, route }) {
       </View>
 
       <View style={{ marginTop: 12 }}>
-        <Text>邀请码（选填）</Text>
+        <Text>{t('invite_code_optional')}</Text>
         <TextInput
           value={inviteCode}
           onChangeText={setInviteCode}
-          placeholder="没有可留空"
+          placeholder={t('invite_code_placeholder')}
           autoCapitalize="characters"
           style={[styles.input, { borderColor: colors.border, borderRadius: borderRadius.md }]}
         />
       </View>
 
       <View style={{ marginTop: 16 }}>
-        <PrimaryButton title="注册并登录" onPress={onSubmit} loading={loading} />
+        <PrimaryButton title={t('register_and_login')} onPress={onSubmit} loading={loading} />
       </View>
 
       <TouchableOpacity style={{ marginTop: 16 }} onPress={() => navigation.replace('Login')}>
-        <Text style={{ color: '#1976D2' }}>已经有账号？去登录</Text>
+        <Text style={{ color: '#1976D2' }}>{`${t('have_account')} ${t('go_login')}`}</Text>
       </TouchableOpacity>
     </View>
   );

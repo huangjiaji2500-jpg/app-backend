@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, Alert, ScrollView } from 'react
 import { useTheme } from '../context/ThemeContext';
 import { useI18n } from '../context/I18nContext';
 import PrimaryButton from '../components/ui/PrimaryButton';
-import { getPaymentMethods, removePaymentMethod, getDisplayName } from '../services/paymentMethods';
+import { getPaymentMethods, removePaymentMethod, getDisplayName, setDefaultPaymentMethod } from '../services/paymentMethods';
 
 export default function PaymentMethodManager({ navigation }) {
   const { colors, borderRadius, spacing } = useTheme();
@@ -27,10 +27,16 @@ export default function PaymentMethodManager({ navigation }) {
   const renderItem = ({ item }) => (
     <View style={{ marginBottom:12, backgroundColor:'#fff', borderRadius:borderRadius.md, borderWidth:1, borderColor:colors.divider, padding:12 }}>
       <Text style={{ fontWeight:'700' }}>{getDisplayName(item, t)}</Text>
-      <View style={{ flexDirection:'row', marginTop:8 }}>
-        <TouchableOpacity onPress={()=> navigation.navigate('PaymentMethodEdit', { id: item.id })} style={{ marginRight:16 }}>
+      <Text style={{ color:'#757575', fontSize:12, marginTop:4 }}>{t('created_time')}: {item.createdAt ? new Date(item.createdAt).toLocaleString() : '-'}</Text>
+      <View style={{ flexDirection:'row', flexWrap:'wrap', marginTop:8, gap:16 }}>
+        <TouchableOpacity onPress={()=> navigation.navigate('PaymentMethodEdit', { id: item.id })}>
           <Text style={{ color: colors.primary }}>{t('edit') || '编辑'}</Text>
         </TouchableOpacity>
+        {!item.isDefault && (
+          <TouchableOpacity onPress={async ()=> { await setDefaultPaymentMethod(item.id); await load(); }}>
+            <Text style={{ color:'#1976D2' }}>{t('set_default_method') || '设为默认'}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity onPress={()=> onDelete(item.id)}>
           <Text style={{ color:'#D32F2F' }}>{t('delete') || '删除'}</Text>
         </TouchableOpacity>
@@ -41,7 +47,8 @@ export default function PaymentMethodManager({ navigation }) {
   return (
     <ScrollView style={{ flex:1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.md }}>
       <Text style={{ fontSize:18, fontWeight:'700', marginBottom:12 }}>{t('manage_payment_methods') || '支付方式管理'}</Text>
-      <PrimaryButton title={t('add_payment_method') || '添加支付方式'} onPress={()=> navigation.navigate('PaymentMethodEdit')} />
+  <PrimaryButton title={t('add_payment_method') || '添加支付方式'} onPress={()=> navigation.navigate('PaymentMethodEdit')} />
+  <Text style={{ marginTop:8, fontSize:12, color:'#616161' }}>{t('default_method_hint') || '默认方式将用于自动选择，可随时更改。'}</Text>
       <View style={{ height:12 }} />
       {/* 使用与安全提示 */}
       <View style={{ backgroundColor:'#FFF', borderRadius:borderRadius.md, padding:12, borderWidth:1, borderColor:colors.divider, marginBottom:16 }}>

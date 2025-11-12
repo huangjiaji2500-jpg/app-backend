@@ -13,33 +13,41 @@ export default function PaymentAddress() {
   const navigation = useNavigation();
   const [form, setForm] = useState({ network: 'TRC20', address: '', label: '' });
   const [status, setStatus] = useState('not_submitted'); // not_submitted | pending_review | approved
+  const addrRef = React.useRef(null);
+  const labelRef = React.useRef(null);
+  const [localAddress, setLocalAddress] = useState('');
+  const [localLabel, setLocalLabel] = useState('');
 
   const validMsg = useMemo(() => {
-    if (!form.address) return '';
-    const ok = isValidUSDTAddress({ network: form.network, address: form.address.trim() });
+    const addr = (localAddress || '').trim();
+    if (!addr) return '';
+    const ok = isValidUSDTAddress({ network: form.network, address: addr });
     if (ok) return t('format_ok');
     if (form.network === 'TRC20') return t('format_error_trc20');
     if (form.network === 'ERC20') return t('format_error_erc20');
     return t('format_error');
-  }, [form, t]);
+  }, [localAddress, form.network, t]);
 
   const load = async () => {
     const info = await getWalletAddressInfo();
     setForm({ network: info.network || 'TRC20', address: info.address || '', label: info.label || '' });
+    setLocalAddress(info.address || '');
+    setLocalLabel(info.label || '');
     setStatus(info.status || 'not_submitted');
   };
 
   useEffect(() => { load(); }, []);
 
   const onSubmit = async () => {
-    const ok = isValidUSDTAddress({ network: form.network, address: form.address.trim() });
+    const addr = (localAddress || '').trim();
+    const ok = isValidUSDTAddress({ network: form.network, address: addr });
   if (!ok) { Alert.alert(t('validation_failed'), t('invalid_address_format_for_network', { network: form.network })); return; }
 
     if (status === 'approved') {
       Alert.alert(t('confirm_change_address_title'), t('confirm_change_address_desc'), [
         { text: t('cancel'), style: 'cancel' },
         { text: t('confirm'), onPress: async () => {
-          await submitWalletAddress({ ...form, address: form.address.trim() });
+          await submitWalletAddress({ ...form, address: addr, label: localLabel });
           setStatus('pending_review');
           Alert.alert(t('submitted_title'), t('resubmitted_desc'));
         }}
@@ -47,7 +55,7 @@ export default function PaymentAddress() {
       return;
     }
 
-    await submitWalletAddress({ ...form, address: form.address.trim() });
+    await submitWalletAddress({ ...form, address: addr, label: localLabel });
     setStatus('pending_review');
     Alert.alert(t('submitted_title'), t('submitted_desc'));
   };
@@ -102,8 +110,9 @@ export default function PaymentAddress() {
         <View style={{ marginTop: 12 }}>
           <Text>{t('usdt_address_label')}</Text>
           <TextInput
-            value={form.address}
-            onChangeText={(v)=> setForm(prev => ({ ...prev, address: v }))}
+            ref={addrRef}
+            value={localAddress}
+            onChangeText={(v)=> setLocalAddress(v)}
             placeholder={form.network==='TRC20' ? t('placeholder_trc20') : t('placeholder_erc20')}
             autoCapitalize="none"
             style={{ backgroundColor: '#fafafa', borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 10, height: 44, marginTop: 6 }}
@@ -115,7 +124,7 @@ export default function PaymentAddress() {
 
         <View style={{ marginTop: 12 }}>
           <Text>{t('remark_optional')}</Text>
-          <TextInput value={form.label} onChangeText={(v)=>setForm({ ...form, label: v })} placeholder=""
+          <TextInput ref={labelRef} value={localLabel} onChangeText={(v)=>setLocalLabel(v)} placeholder=""
             style={{ backgroundColor: '#fafafa', borderWidth: 1, borderColor: colors.border, borderRadius: 8, paddingHorizontal: 10, height: 44, marginTop: 6 }} />
         </View>
 

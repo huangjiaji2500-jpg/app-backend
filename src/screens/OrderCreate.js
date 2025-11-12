@@ -69,7 +69,9 @@ export default function OrderCreate({ route, navigation }){
       }
     } catch {}
     setMethods(list);
-    if (list.length === 1) setSelectedMethodId(list[0].id);
+    // 优先选中默认方式；否则选中钱包默认；否则第一个
+    const preferred = list.find(x => x.isDefault) || list.find(x => x.id === 'WALLET_DEFAULT') || list[0];
+    if (preferred) setSelectedMethodId(preferred.id);
   };
 
   // 初次加载
@@ -114,7 +116,8 @@ export default function OrderCreate({ route, navigation }){
 
   // 金额解析与换算
   const parsed = Number(val) || 0;
-  const unitPriceLocal = Number(((baseLocalRate || 1) / (baseUsdRate || 1)).toFixed(6)); // 1 USDT = ? 本地币
+  // 直接使用 displayRates 中的本地币比例作为 "1 USDT = X 本地币"，与 MerchantCard 保持一致
+  const unitPriceLocal = Number((baseLocalRate || 1).toFixed(6)); // 1 USDT = ? 本地币
   const amountUSDT = mode === 'USDT' ? parsed : (parsed > 0 ? Number((parsed / (unitPriceLocal || 1)).toFixed(6)) : 0);
   const totalUSD = Number((amountUSDT * priceUSD).toFixed(2));
   const totalLocal = Number((amountUSDT * unitPriceLocal).toFixed((localCurrency==='KRW'||localCurrency==='JPY')?0:2));

@@ -51,7 +51,11 @@ export default function EarningsDetails() {
       }
     } catch {}
     setMethods(list);
-    if (!selectedMethodId && list.length===1) setSelectedMethodId(list[0].id);
+    // 优先选中默认方式；否则钱包默认；否则第一条
+    if (!selectedMethodId) {
+      const preferred = list.find(x => x.isDefault) || list.find(x => x.id === 'WALLET_DEFAULT') || list[0];
+      if (preferred) setSelectedMethodId(preferred.id);
+    }
   };
 
   useEffect(()=>{ loadMethods(); }, []);
