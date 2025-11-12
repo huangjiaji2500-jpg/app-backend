@@ -33,15 +33,22 @@ module.exports = async (req, res) => {
   if (!platformDeposit) return json(res, 400, { error:'invalid_platform_deposit' });
   platformDeposit.syncedAt = Date.now();
   let persisted = false;
+  console.log('[sync/platform-deposit] incoming write', { envHasMongo: !!process.env.MONGODB_URI, address: platformDeposit.address ? 'has' : 'none' });
   try {
     const mg = await getMongo();
     if (mg){
-      const col = mg.db.collection('synced_platform_config');
-      // Keep only latest doc: upsert with a fixed key
-      await col.updateOne({ _id:'platform' }, { $set: { ...platformDeposit, _id:'platform' } }, { upsert: true });
-      persisted = true;
+      try{
+        const col = mg.db.collection('synced_platform_config');
+        // Keep only latest doc: upsert with a fixed key
+        await col.updateOne({ _id:'platform' }, { $set: { ...platformDeposit, _id:'platform' } }, { upsert: true });
+        persisted = true;
+        console.log('[sync/platform-deposit] write persisted to mongo');
+      }catch(e){
+        console.log('[sync/platform-deposit] mongo write error', e && e.message);
+      }
     }
   } catch {}
   if (!persisted){ MEMORY.platformDeposit = platformDeposit; }
+  if (!persisted) console.log('[sync/platform-deposit] persisted to memory fallback');
   return json(res, 200, { ok:true });
 };

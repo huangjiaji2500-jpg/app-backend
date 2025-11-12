@@ -33,17 +33,24 @@ module.exports = async (req, res) => {
   if (!rate || !rate.base || !rate.quote) return json(res, 400, { error:'invalid_rate' });
   rate.syncedAt = Date.now();
   let persisted = false;
+  console.log('[sync/rate] incoming rate write', { base: rate.base, quote: rate.quote, value: rate.value, envHasMongo: !!process.env.MONGODB_URI });
   try {
     const mg = await getMongo();
     if (mg){
-      const col = mg.db.collection('synced_rates');
-      await col.updateOne({ base: rate.base, quote: rate.quote }, { $set: rate }, { upsert: true });
-      persisted = true;
+      try{
+        const col = mg.db.collection('synced_rates');
+        await col.updateOne({ base: rate.base, quote: rate.quote }, { $set: rate }, { upsert: true });
+        persisted = true;
+        console.log('[sync/rate] write persisted to mongo', { base: rate.base, quote: rate.quote });
+      }catch(e){
+        console.log('[sync/rate] mongo write error', e && e.message);
+      }
     }
   } catch {}
   if (!persisted){
     const idx = MEMORY.rates.findIndex(r => r.base===rate.base && r.quote===rate.quote);
     if (idx >= 0) MEMORY.rates[idx] = rate; else MEMORY.rates.push(rate);
+    console.log('[sync/rate] persisted to memory fallback', { base: rate.base, quote: rate.quote });
   }
   return json(res, 200, { ok:true });
 };

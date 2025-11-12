@@ -41,8 +41,9 @@ module.exports = async (req, res) => {
       try {
         const arr = await mg.db.collection('synced_platform_config').find({}).sort({ _id:-1 }).limit(1).toArray();
         platformDeposit = arr[0] || null;
-      } catch(e){}
-      return json(res, 200, { ok:true, displayRates, platformDeposit });
+      } catch(e){ console.log('[public/platform-config] read platform config error', e && e.message); }
+      console.log('[public/platform-config] returning mongo-sourced config');
+      return json(res, 200, { ok:true, displayRates, platformDeposit, debug:{ source:'mongo', envHasMongo: !!process.env.MONGODB_URI } });
     }
   } catch(e){}
   // Fallback to memory if no mongo
@@ -58,6 +59,7 @@ module.exports = async (req, res) => {
       else if (quote === 'JPY') displayRates.JPY = val;
       else if (quote === 'USD') displayRates.USD = val;
     }
-    return json(res, 200, { ok:true, displayRates, platformDeposit: MEM.platformDeposit || null });
+    console.log('[public/platform-config] falling back to memory');
+    return json(res, 200, { ok:true, displayRates, platformDeposit: MEM.platformDeposit || null, debug:{ source:'memory', envHasMongo: !!process.env.MONGODB_URI } });
   } catch(e) { return json(res, 200, { ok:true, displayRates: DEFAULT_DISPLAY, platformDeposit: null }); }
 };

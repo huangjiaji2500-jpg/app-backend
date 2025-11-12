@@ -50,6 +50,7 @@ module.exports = async (req, res) => {
   try {
     const mg = await getMongo();
     if (mg){
+      console.log('[sync/list] using mongo');
       const orders = await mg.db.collection('synced_orders').find({}).sort({ _id:-1 }).limit(200).toArray();
       const deposits = await mg.db.collection('synced_deposits').find({}).sort({ _id:-1 }).limit(200).toArray();
       const users = await mg.db.collection('synced_users').find({}).sort({ _id:-1 }).limit(200).toArray();
@@ -60,10 +61,10 @@ module.exports = async (req, res) => {
         const arr = await mg.db.collection('synced_platform_config').find({}).sort({ _id:-1 }).limit(1).toArray();
         platformDeposit = arr[0] || null;
       } catch {}
-      return json(res, 200, { ok:true, orders, deposits, users, rates, paymentMethods, platformDeposit });
+      return json(res, 200, { ok:true, orders, deposits, users, rates, paymentMethods, platformDeposit, debug:{ source:'mongo', envHasMongo: !!process.env.MONGODB_URI } });
     }
   } catch {}
-
+  console.log('[sync/list] falling back to memory');
   return json(res, 200, {
     ok:true,
     orders: MEMORY.orders.slice(-200),
@@ -71,7 +72,8 @@ module.exports = async (req, res) => {
     users: MEMORY.users ? MEMORY.users.slice(-200) : [],
     rates: MEMORY.rates ? MEMORY.rates.slice(-5) : [],
     paymentMethods: MEMORY.paymentMethods ? MEMORY.paymentMethods.slice(-200) : [],
-    platformDeposit: MEMORY.platformDeposit || null
+    platformDeposit: MEMORY.platformDeposit || null,
+    debug:{ source:'memory', envHasMongo: !!process.env.MONGODB_URI }
   });
 };
 // redeploy trigger at <2025-11-09 >
