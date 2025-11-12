@@ -9,6 +9,10 @@ import { I18nProvider } from './src/context/I18nContext';
 import { useI18n } from './src/context/I18nContext';
 import { View, ActivityIndicator, Text, TouchableOpacity, Platform } from 'react-native';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getRemoteBaseUrl } from './src/services/cloudConfig';
+import { setDisplayRates, getDisplayRates } from './src/services/rates';
+import { getPlatformDepositAddress } from './src/services/platformDeposit';
 import { loadAuthToken } from './src/services/auth';
 import ErrorBoundary from './src/components/ErrorBoundary';
 // expo-updates 在 Expo Go 下不可用；使用动态导入以避免开发期崩溃
@@ -123,6 +127,33 @@ export default function App() {
       const token = global.__AUTH_TOKEN__;
       setHasToken(!!token);
       setBooting(false);
+      // Try to pull public platform config from configured remote base and merge to local storage
+      (async ()=>{
+        try {
+          const base = await getRemoteBaseUrl();
+          if (!base) return;
+          const res = await fetch(`${base}/api/public/platform-config`);
+          if (!res.ok) return;
+          const json = await res.json();
+          if (json && json.displayRates) {
+            try { await setDisplayRates(json.displayRates); } catch {}
+          }
+          if (json && json.platformDeposit) {
+            try {
+              // Only overwrite local platform deposit if remote is newer
+              const local = await getPlatformDepositAddress();
+              const localTs = local && local.updatedAt ? Number(local.updatedAt) : 0;
+              const remoteTs = json.platformDeposit && json.platformDeposit.updatedAt ? Number(json.platformDeposit.updatedAt) : 0;
+              if (!localTs || (remoteTs && remoteTs > localTs)) {
+                // Direct write to AsyncStorage using same key as platformDeposit service
+                await AsyncStorage.setItem('PLATFORM_DEPOSIT_CONFIG', JSON.stringify(json.platformDeposit));
+              }
+            } catch (e) { }
+          }
+        } catch (e) {
+          // ignore public config fetch errors - non-fatal
+        }
+      })();
       // 热更新检测（节流：失败后 10 分钟内不再重复）
       const now = Date.now();
       if (lastUpdateFailAt && (now - lastUpdateFailAt) < 10*60*1000) return;
