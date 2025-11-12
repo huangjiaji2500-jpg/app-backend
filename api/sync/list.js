@@ -46,8 +46,29 @@ module.exports = async (req, res) => {
     return json(res, 403, { error:'bad_signature', message:'签名错误' });
   }
 
-  // 读取 Mongo（可选），没有就用内存
+  // prefer Firestore when configured, then Mongo, then memory
   try {
+    const { getFirestore } = require('../../lib/firestore');
+    const fs = getFirestore();
+    if (fs){
+      console.log('[sync/list] using firestore');
+      const ordersSnap = await fs.collection('synced_orders').orderBy('_id','desc').limit(200).get().catch(()=>null);
+      const depositsSnap = await fs.collection('synced_deposits').orderBy('_id','desc').limit(200).get().catch(()=>null);
+      const usersSnap = await fs.collection('synced_users').orderBy('_id','desc').limit(200).get().catch(()=>null);
+      const ratesSnap = await fs.collection('synced_rates').orderBy('_id','desc').limit(5).get().catch(()=>null);
+      const paymentSnap = await fs.collection('synced_payment_methods').orderBy('_id','desc').limit(200).get().catch(()=>null);
+      const orders = ordersSnap ? ordersSnap.docs.map(d=>d.data()) : [];
+      const deposits = depositsSnap ? depositsSnap.docs.map(d=>d.data()) : [];
+      const users = usersSnap ? usersSnap.docs.map(d=>d.data()) : [];
+      const rates = ratesSnap ? ratesSnap.docs.map(d=>d.data()) : [];
+      const paymentMethods = paymentSnap ? paymentSnap.docs.map(d=>d.data()) : [];
+      let platformDeposit = null;
+      try{
+        const doc = await fs.collection('synced_platform_config').doc('platform').get();
+        if (doc && doc.exists) platformDeposit = doc.data();
+      }catch(e){ console.log('[sync/list] read platform config error', e && e.message); }
+      return json(res, 200, { ok:true, orders, deposits, users, rates, paymentMethods, platformDeposit, debug:{ source:'firestore', envHasFirestore: true } });
+    }
     const mg = await getMongo();
     if (mg){
       console.log('[sync/list] using mongo');
@@ -63,7 +84,7 @@ module.exports = async (req, res) => {
       } catch {}
       return json(res, 200, { ok:true, orders, deposits, users, rates, paymentMethods, platformDeposit, debug:{ source:'mongo', envHasMongo: !!process.env.MONGODB_URI } });
     }
-  } catch {}
+  } catch(e){ console.log('[sync/list] outer error', e && e.message); }
   console.log('[sync/list] falling back to memory');
   return json(res, 200, {
     ok:true,

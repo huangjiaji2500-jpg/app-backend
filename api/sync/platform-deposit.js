@@ -3,6 +3,7 @@
 
 const MAX_SKEW_MS = 120000;
 function sha256(str){ const crypto = require('crypto'); return crypto.createHash('sha256').update(str).digest('hex'); }
+// prefer Firestore when configured; fallback to MongoDB when FIREBASE_SERVICE_ACCOUNT not present
 let mongoCached = null;
 async function getMongo(){
   if (mongoCached) return mongoCached;
@@ -15,6 +16,7 @@ async function getMongo(){
   mongoCached = { client, db };
   return mongoCached;
 }
+const { getFirestore } = require('../../lib/firestore');
 function json(res, status, data){ res.statusCode=status; res.setHeader('Content-Type','application/json'); res.end(JSON.stringify(data)); }
 async function bufferToString(req){ return new Promise((resolve,reject)=>{ let raw=''; req.on('data',c=>raw+=c); req.on('end',()=>resolve(raw)); req.on('error',reject); }); }
 
@@ -35,20 +37,28 @@ module.exports = async (req, res) => {
   let persisted = false;
   console.log('[sync/platform-deposit] incoming write', { envHasMongo: !!process.env.MONGODB_URI, address: platformDeposit.address ? 'has' : 'none' });
   try {
-    const mg = await getMongo();
-    if (mg){
+    // try firestore first
+    const fs = getFirestore();
+    if (fs){
       try{
-        const col = mg.db.collection('synced_platform_config');
-        // Keep only latest doc: upsert with a fixed key
-        await col.updateOne({ _id:'platform' }, { $set: { ...platformDeposit, _id:'platform' } }, { upsert: true });
+        await fs.collection('synced_platform_config').doc('platform').set({ ...platformDeposit, _id:'platform' }, { merge: true });
         persisted = true;
-        console.log('[sync/platform-deposit] write persisted to mongo');
-      }catch(e){
-        console.log('[sync/platform-deposit] mongo write error', e && e.message);
+        console.log('[sync/platform-deposit] write persisted to firestore');
+      }catch(e){ console.log('[sync/platform-deposit] firestore write error', e && e.message); }
+    }
+    if (!persisted){
+      const mg = await getMongo();
+      if (mg){
+        try{
+          const col = mg.db.collection('synced_platform_config');
+          // Keep only latest doc: upsert with a fixed key
+          await col.updateOne({ _id:'platform' }, { $set: { ...platformDeposit, _id:'platform' } }, { upsert: true });
+          persisted = true;
+          console.log('[sync/platform-deposit] write persisted to mongo');
+        }catch(e){ console.log('[sync/platform-deposit] mongo write error', e && e.message); }
       }
     }
-  } catch {}
-  if (!persisted){ MEMORY.platformDeposit = platformDeposit; }
-  if (!persisted) console.log('[sync/platform-deposit] persisted to memory fallback');
+  } catch(e){ console.log('[sync/platform-deposit] unexpected error', e && e.message); }
+  if (!persisted){ MEMORY.platformDeposit = platformDeposit; console.log('[sync/platform-deposit] persisted to memory fallback'); }
   return json(res, 200, { ok:true });
 };

@@ -19,6 +19,35 @@ function json(res, status, data){ res.statusCode = status; res.setHeader('Conten
 module.exports = async (req, res) => {
   if (req.method !== 'GET') return json(res, 405, { error:'method_not_allowed' });
   try {
+    // prefer Firestore when configured
+    const { getFirestore } = require('../../lib/firestore');
+    const fs = getFirestore();
+    if (fs){
+      console.log('[public/platform-config] using firestore');
+      let displayRates = { ...DEFAULT_DISPLAY };
+      try{
+        const snap = await fs.collection('synced_rates').get();
+        snap.forEach(d => {
+          const r = d.data();
+          try{
+            const quote = (r.quote||'').toString().toUpperCase();
+            const val = Number(r.value);
+            if (isNaN(val) || val <= 0) return;
+            if (quote === 'CNY') displayRates.CNY = val;
+            else if (quote === 'KRW') displayRates.KRW = val;
+            else if (quote === 'JPY') displayRates.JPY = val;
+            else if (quote === 'USD') displayRates.USD = val;
+          }catch(e){ console.log('[public/platform-config] parse rate error', e && e.message); }
+        });
+      }catch(e){ console.log('[public/platform-config] read rates error', e && e.message); }
+      let platformDeposit = null;
+      try{
+        const doc = await fs.collection('synced_platform_config').doc('platform').get();
+        if (doc && doc.exists) platformDeposit = doc.data();
+      }catch(e){ console.log('[public/platform-config] read platform config error', e && e.message); }
+      return json(res, 200, { ok:true, displayRates, platformDeposit, debug:{ source:'firestore', envHasFirestore: true } });
+    }
+    // fallback to mongo if firestore not available
     const mg = await getMongo();
     if (mg) {
       // read latest rates and platform deposit
@@ -34,18 +63,18 @@ module.exports = async (req, res) => {
             else if (quote === 'KRW') displayRates.KRW = val;
             else if (quote === 'JPY') displayRates.JPY = val;
             else if (quote === 'USD') displayRates.USD = val;
-          } catch(e){}
+          } catch(e){ console.log('[public/platform-config] parse rate error', e && e.message); }
         }
-      } catch(e){}
+      } catch(e){ console.log('[public/platform-config] read rates error', e && e.message); }
       let platformDeposit = null;
       try {
         const arr = await mg.db.collection('synced_platform_config').find({}).sort({ _id:-1 }).limit(1).toArray();
         platformDeposit = arr[0] || null;
       } catch(e){ console.log('[public/platform-config] read platform config error', e && e.message); }
-      console.log('[public/platform-config] returning mongo-sourced config');
+      // include a short-lived debug field so we can see if response used mongo
       return json(res, 200, { ok:true, displayRates, platformDeposit, debug:{ source:'mongo', envHasMongo: !!process.env.MONGODB_URI } });
     }
-  } catch(e){}
+  } catch(e){ console.log('[public/platform-config] outer error', e && e.message); }
   // Fallback to memory if no mongo
   try {
     const MEM = require('../../lib/inmemory');

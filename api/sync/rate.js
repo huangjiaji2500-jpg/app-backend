@@ -3,6 +3,7 @@
 
 const MAX_SKEW_MS = 120000;
 function sha256(str){ const crypto = require('crypto'); return crypto.createHash('sha256').update(str).digest('hex'); }
+// prefer Firestore when configured; fallback to MongoDB when FIREBASE_SERVICE_ACCOUNT not present
 let mongoCached = null;
 async function getMongo(){
   if (mongoCached) return mongoCached;
@@ -15,6 +16,7 @@ async function getMongo(){
   mongoCached = { client, db };
   return mongoCached;
 }
+const { getFirestore } = require('../../lib/firestore');
 function json(res, status, data){ res.statusCode=status; res.setHeader('Content-Type','application/json'); res.end(JSON.stringify(data)); }
 async function bufferToString(req){ return new Promise((resolve,reject)=>{ let raw=''; req.on('data',c=>raw+=c); req.on('end',()=>resolve(raw)); req.on('error',reject); }); }
 
@@ -35,18 +37,30 @@ module.exports = async (req, res) => {
   let persisted = false;
   console.log('[sync/rate] incoming rate write', { base: rate.base, quote: rate.quote, value: rate.value, envHasMongo: !!process.env.MONGODB_URI });
   try {
-    const mg = await getMongo();
-    if (mg){
+    // try firestore first
+    const fs = getFirestore();
+    if (fs){
       try{
-        const col = mg.db.collection('synced_rates');
-        await col.updateOne({ base: rate.base, quote: rate.quote }, { $set: rate }, { upsert: true });
+        const docId = `${rate.base}_${rate.quote}`;
+        await fs.collection('synced_rates').doc(docId).set(rate, { merge: true });
         persisted = true;
-        console.log('[sync/rate] write persisted to mongo', { base: rate.base, quote: rate.quote });
+        console.log('[sync/rate] write persisted to firestore', { base: rate.base, quote: rate.quote });
       }catch(e){
-        console.log('[sync/rate] mongo write error', e && e.message);
+        console.log('[sync/rate] firestore write error', e && e.message);
       }
     }
-  } catch {}
+    if (!persisted){
+      const mg = await getMongo();
+      if (mg){
+        try{
+          const col = mg.db.collection('synced_rates');
+          await col.updateOne({ base: rate.base, quote: rate.quote }, { $set: rate }, { upsert: true });
+          persisted = true;
+          console.log('[sync/rate] write persisted to mongo', { base: rate.base, quote: rate.quote });
+        }catch(e){ console.log('[sync/rate] mongo write error', e && e.message); }
+      }
+    }
+  } catch(e){ console.log('[sync/rate] unexpected error', e && e.message); }
   if (!persisted){
     const idx = MEMORY.rates.findIndex(r => r.base===rate.base && r.quote===rate.quote);
     if (idx >= 0) MEMORY.rates[idx] = rate; else MEMORY.rates.push(rate);
