@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin — 平台配置</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:20px}
+    textarea{width:100%;height:120px;font-family:monospace}
+    .row{margin-bottom:12px}
+    label{font-weight:600}
+    .small{font-size:12px;color:#666}
+    button{margin-right:8px}
+  </style>
+</head>
+<body>
+  <h1>平台配置（管理员）</h1>
+  <p class="small">注意：确保在 Session Storage 中设置管理员密钥（键：<code>ADMIN_PANEL_SECRET</code>）。</p>
+
+  <div class="row">
+    <label>管理员密钥（Admin Secret）</label><br/>
+    <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 Save" />
+    <div style="margin-top:6px">
+      <button id="saveSecret">保存到 sessionStorage</button>
+      <button id="clearSecret">清除</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <label>displayRates（JSON）</label>
+    <textarea id="displayRates" placeholder='例如: {"USD":1.27, "CNY":9}'></textarea>
+  </div>
+
+  <div class="row">
+    <label>platformDeposit（JSON）</label>
+    <textarea id="platformDeposit" placeholder='例如: {"method":"qr","value":"..."}'></textarea>
+  </div>
+
+  <div class="row">
+    <button id="load">Load current</button>
+    <button id="save">Save to server</button>
+    <span id="status" style="margin-left:12px"></span>
+  </div>
+
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const status = txt => { $('#status').textContent = txt; };
+
+    // load admin secret from sessionStorage
+    const KEY = 'ADMIN_PANEL_SECRET';
+    const adminSecretInput = $('#adminSecret');
+    adminSecretInput.value = sessionStorage.getItem(KEY) || '';
+
+    $('#saveSecret').onclick = () => {
+      sessionStorage.setItem(KEY, adminSecretInput.value.trim());
+      status('管理员密钥已保存到 sessionStorage');
+    };
+    $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; status('已清除'); };
+
+    $('#load').onclick = async () => {
+      status('加载中...');
+      try {
+        const r = await fetch('/api/public/platform-config');
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json();
+        if(j.displayRates) $('#displayRates').value = JSON.stringify(j.displayRates, null, 2);
+        if(j.platformDeposit) $('#platformDeposit').value = JSON.stringify(j.platformDeposit, null, 2);
+        status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
+      } catch(e){
+        status('加载失败: ' + e.message);
+      }
+    };
+
+    $('#save').onclick = async () => {
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
+
+      let displayRates, platformDeposit;
+      try{
+        displayRates = JSON.parse($('#displayRates').value || '{}');
+      }catch(e){ status('displayRates JSON 解析失败: ' + e.message); return; }
+      try{
+        platformDeposit = JSON.parse($('#platformDeposit').value || '{}');
+      }catch(e){ status('platformDeposit JSON 解析失败: ' + e.message); return; }
+
+      status('保存中...');
+      try{
+        const r = await fetch('/api/admin/set-platform-config', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-admin-secret': secret
+          },
+          body: JSON.stringify({ displayRates, platformDeposit })
+        });
+        const j = await r.json().catch(()=>({ok:false}));
+        if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
+        status('保存成功');
+      }catch(e){
+        status('保存失败: ' + e.message);
+      }
+    };
+  </script>
+</body>
+</html>
