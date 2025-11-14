@@ -17,6 +17,4 @@ build/
 # Exclude project-internal or temporary API routes from Hobby deployments
 /api/sync/
 /api/debug/
-/api/auth/on-login.js
-/api/admin/users.js
 /api/sync.js
