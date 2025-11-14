@@ -32,9 +32,24 @@ module.exports = async (req, res) => {
 
   // parse body
   let body = req.body;
-  if (!body || Object.keys(body).length === 0) {
-    // Vercel / some setups may not parse JSON automatically; try raw
-    try { body = JSON.parse(req.rawBody || '{}'); } catch (e) { body = {} }
+  if (!body || (typeof body === 'object' && Object.keys(body).length === 0)) {
+    // Vercel may not populate req.body; try req.rawBody, else read the request stream
+    let raw = req.rawBody;
+    if (!raw) {
+      try {
+        raw = await new Promise((resolve, reject) => {
+          let data = '';
+          req.on('data', chunk => { data += chunk.toString(); });
+          req.on('end', () => resolve(data));
+          req.on('error', err => reject(err));
+        });
+      } catch (e) {
+        console.error('[admin/set-platform-config] error reading request stream', e && (e.stack || e.message));
+        raw = '';
+      }
+    }
+    try { body = raw ? JSON.parse(raw) : {}; } catch (e) { console.error('[admin/set-platform-config] JSON parse error', e && (e.stack || e.message)); body = {}; }
+    console.log('[admin/set-platform-config] parsed body keys', Object.keys(body || {}));
   }
 
   const { displayRates, platformDeposit } = body || {};
