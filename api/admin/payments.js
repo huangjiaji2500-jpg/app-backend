@@ -13,11 +13,12 @@ module.exports = async (req, res) => {
 
     if (req.method === 'GET') {
       const q = await db.collection('payments').orderBy('createdAt', 'desc').limit(200).get();
-      const bucket = admin.storage().bucket();
+      let bucket = null;
+      try { bucket = admin.storage().bucket(); } catch (e) { bucket = null; }
       const items = await Promise.all(q.docs.map(async d => {
         const data = d.data();
         const out = { id: d.id, ...data };
-        if (data.storagePath) {
+        if (data.storagePath && bucket) {
           try {
             const file = bucket.file(data.storagePath);
             const signed = await file.getSignedUrl({ action: 'read', expires: Date.now() + 60 * 60 * 1000 });
@@ -25,6 +26,8 @@ module.exports = async (req, res) => {
           } catch (e) {
             out.receiptViewUrl = null;
           }
+        } else {
+          out.receiptViewUrl = null;
         }
         return out;
       }));

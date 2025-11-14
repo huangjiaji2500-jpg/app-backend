@@ -1,4 +1,4 @@
-const { getFirestore } = require('./lib/../lib/firestore');
+const { getFirestore } = require('../lib/firestore');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
@@ -30,10 +30,14 @@ module.exports = async (req, res) => {
       const ts = Date.now();
       const filename = `payments/${uid}/${ts}.${ext}`;
       try {
-        const bucket = require('firebase-admin').storage().bucket();
-        const file = bucket.file(filename);
-        await file.save(buffer, { metadata: { contentType } });
-        storagePath = filename;
+        try {
+          const bucket = require('firebase-admin').storage().bucket();
+          const file = bucket.file(filename);
+          await file.save(buffer, { metadata: { contentType } });
+          storagePath = filename;
+        } catch (e) {
+          console.error('[api/payments] storage upload error (inner)', e && (e.stack || e.message));
+        }
       } catch (e) {
         console.error('[api/payments] storage upload error', e && (e.stack || e.message));
       }
