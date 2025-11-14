@@ -1,0 +1,1 @@
+{"ok":true,"displayRates":{"USD":1.27,"CNY":9,"KRW":1851,"JPY":195},"platformDeposit":{"note":"test from script","address":"TK_ADMIN_TEST_ADDRESS","qrImage":"","_id":"platform","syncedAt":1762969142288,"updatedAt":1762969141057},"debug":{"source":"firestore","envHasFirestore":true}}

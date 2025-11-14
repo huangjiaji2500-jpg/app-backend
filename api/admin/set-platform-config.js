@@ -32,13 +32,14 @@ module.exports = async (req, res) => {
 
   // parse body
   let body = req.body;
+  let raw = undefined;
   // If body is missing, or not already an object (some runtimes give raw string),
   // try to parse req.rawBody or read the request stream.
   if (!body || typeof body !== 'object' || (typeof body === 'object' && Object.keys(body).length === 0)) {
     console.log('[admin/set-platform-config] headers:', Object.keys(req.headers || {}));
     console.log('[admin/set-platform-config] content-length:', req.headers && req.headers['content-length']);
     // Vercel may not populate req.body; try req.rawBody, else read the request stream
-    let raw = req.rawBody;
+    raw = req.rawBody;
     if (!raw) {
       try {
         raw = await new Promise((resolve, reject) => {
@@ -56,6 +57,10 @@ module.exports = async (req, res) => {
     console.log('[admin/set-platform-config] parsed body type:', typeof body, 'keys:', Object.keys(body || {}));
   }
 
+  // We'll write a debug document after updating the platform doc so the platform write's success is primary.
+  let lastDebugId = undefined;
+  let lastDebugError = undefined;
+
   const { displayRates, platformDeposit } = body || {};
   if (!displayRates && !platformDeposit) {
     return res.status(400).json({ ok: false, error: 'Nothing to update (expect displayRates or platformDeposit)' });
@@ -71,7 +76,35 @@ module.exports = async (req, res) => {
     if (platformDeposit) payload.platformDeposit = platformDeposit;
 
     await docRef.set(payload, { merge: true });
-    return res.status(200).json({ ok: true });
+
+    // attempt to write debug history after the platform update only if DEBUG_ADMIN_POST env enabled
+    try {
+      const enableDebug = (process.env.DEBUG_ADMIN_POST || '').toString().toLowerCase() === 'true';
+      if (enableDebug && db) {
+        const debugDoc = {
+          ts: new Date().toISOString(),
+          headers: Object.keys(req.headers || {}).reduce((acc, k) => { acc[k] = req.headers[k]; return acc; }, {}),
+          contentLength: req.headers && req.headers['content-length'] ? req.headers['content-length'] : null,
+          raw: (typeof raw === 'string' && raw.length > 0) ? raw : null,
+          parsedBody: (body && Object.keys(body || {}).length) ? body : null,
+          platformUpdatedAt: now,
+        };
+        try {
+          const ref = await db.collection('platform_debug_history').add(debugDoc);
+          lastDebugId = ref.id;
+        } catch (dbgErr) {
+          lastDebugError = dbgErr && (dbgErr.stack || dbgErr.message);
+          console.error('[admin/set-platform-config] failed to write debug doc', lastDebugError);
+        }
+      }
+    } catch (e) {
+      console.error('[admin/set-platform-config] unexpected error while writing debug doc', e && (e.stack || e.message));
+    }
+
+  const resp = { ok: true };
+  if (lastDebugId) resp.debugId = lastDebugId;
+  if (lastDebugError) resp.debugError = lastDebugError;
+  return res.status(200).json(resp);
   } catch (err) {
     console.error('set-platform-config error', err && err.stack ? err.stack : err);
     return res.status(500).json({ ok: false, error: 'internal error' });
