@@ -43,8 +43,9 @@ module.exports = async (req, res) => {
   }
 
   // Ensure Firebase was initialized at module load time
-  if (!db) return res.status(500).json({ ok: false, error: 'FIREBASE_SERVICE_ACCOUNT env missing or invalid' });
-  const docRef = db.doc('platform/platform');
+  try {
+    if (!db) return res.status(500).json({ ok: false, error: 'FIREBASE_SERVICE_ACCOUNT env missing or invalid' });
+    const docRef = db.doc('platform/platform');
     const now = new Date().toISOString();
     const payload = { updatedAt: now };
     if (displayRates) payload.displayRates = displayRates;
