@@ -70,10 +70,36 @@ module.exports = async (req, res) => {
   try {
     if (!db) return res.status(500).json({ ok: false, error: 'FIREBASE_SERVICE_ACCOUNT env missing or invalid' });
     const docRef = db.doc('platform/platform');
-    const now = new Date().toISOString();
-    const payload = { updatedAt: now };
+    // Use numeric timestamps for platformDeposit.updatedAt so mobile app (which stores
+    // updatedAt as a number) can compare easily. Also maintain a configVersion counter
+    // so clients can detect changes reliably.
+    const nowIso = new Date().toISOString();
+    const nowTs = Date.now();
+    const payload = { updatedAt: nowIso };
     if (displayRates) payload.displayRates = displayRates;
-    if (platformDeposit) payload.platformDeposit = platformDeposit;
+    if (platformDeposit) {
+      // ensure platformDeposit has numeric updatedAt
+      try {
+        if (typeof platformDeposit === 'object') {
+          platformDeposit.updatedAt = nowTs;
+        }
+      } catch (e) {}
+      payload.platformDeposit = platformDeposit;
+    }
+
+    // read current doc to increment configVersion
+    let currentVersion = 0;
+    try {
+      const snap = await docRef.get();
+      if (snap && snap.exists) {
+        const data = snap.data();
+        if (data && typeof data.configVersion === 'number') currentVersion = data.configVersion;
+      }
+    } catch (e) {
+      // ignore read errors and default to 0
+      console.warn('[admin/set-platform-config] failed to read current configVersion', e && (e.stack || e.message));
+    }
+    payload.configVersion = (currentVersion || 0) + 1;
 
     await docRef.set(payload, { merge: true });
 

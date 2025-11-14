@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin — 平台配置</title>
+  <title>平台配置（管理员）</title>
   <style>
     body{font-family:system-ui,Segoe UI,Arial;margin:20px}
     textarea{width:100%;height:120px;font-family:monospace}
@@ -15,32 +15,45 @@
 </head>
 <body>
   <h1>平台配置（管理员）</h1>
-  <p class="small">注意：确保在 Session Storage 中设置管理员密钥（键：<code>ADMIN_PANEL_SECRET</code>）。</p>
+  <p class="small">注意：请在会话存储（Session Storage）中设置管理员密钥（键：<code>ADMIN_PANEL_SECRET</code>）。</p>
 
   <div class="row">
-    <label>管理员密钥（Admin Secret）</label><br/>
-    <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 Save" />
+  <label>管理员密钥</label><br/>
+  <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
     <div style="margin-top:6px">
       <button id="saveSecret">保存到 sessionStorage</button>
       <button id="clearSecret">清除</button>
     </div>
   </div>
 
+  <hr />
+  <h2>审核充值凭证</h2>
+  <p class="small">从服务器加载最近的充值凭证，审核通过后会为用户增加 USDT 余额。</p>
   <div class="row">
-    <label>displayRates（JSON）</label>
+  <button id="loadPayments">加载充值凭证</button>
+  <label style="margin-left:12px">筛选: <select id="filterSelect"><option value="pending">仅待审核</option><option value="all">全部</option></select></label>
+    <span id="paymentsStatus" style="margin-left:12px"></span>
+    <button id="toggleRaw" style="margin-left:12px">显示原始响应</button>
+  </div>
+  <pre id="rawResponse" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;border:1px solid #eee;display:none;max-height:200px;overflow:auto;margin-top:8px"></pre>
+  <div id="paymentsList" style="margin-top:12px"></div>
+
+  <div class="row">
+    <label>显示汇率（JSON）</label>
     <textarea id="displayRates" placeholder='例如: {"USD":1.27, "CNY":9}'></textarea>
   </div>
 
   <div class="row">
-    <label>platformDeposit（JSON）</label>
+    <label>平台充值（JSON）</label>
     <textarea id="platformDeposit" placeholder='例如: {"method":"qr","value":"..."}'></textarea>
   </div>
 
   <div class="row">
-    <button id="load">Load current</button>
-    <button id="save">Save to server</button>
+    <button id="load">加载当前配置</button>
+    <button id="save">保存到服务器</button>
     <span id="status" style="margin-left:12px"></span>
   </div>
+  
 
   <script>
     const $ = sel => document.querySelector(sel);
@@ -100,6 +113,178 @@
         status('保存失败: ' + e.message);
       }
     };
+
+    // Payments review with default pending filter + client-side pagination
+    const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
+    const rawResponseEl = $('#rawResponse');
+    $('#toggleRaw').onclick = () => {
+      if(!rawResponseEl) return;
+      rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none';
+    };
+    const paymentsList = $('#paymentsList');
+    const filterSelect = $('#filterSelect');
+
+  let paymentsData = []; // raw from server
+  let currentFilter = 'all';
+    let pageSize = 8;
+    let currentPage = 1;
+
+  filterSelect.value = 'all';
+    filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+
+    async function loadPayments() {
+      paymentsStatus('加载中...');
+      paymentsList.innerHTML = '';
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
+      try{
+        const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json();
+  paymentsData = j.payments || [];
+  paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
+        try{ rawResponseEl.style.display = 'block'; rawResponseEl.textContent = JSON.stringify(j, null, 2); }catch(e){ /* ignore */ }
+        currentPage = 1;
+        renderPage();
+      }catch(e){ paymentsStatus('加载失败: ' + e.message); }
+    }
+
+    function fmtDate(d){ try{ return new Date(d).toLocaleString(); }catch(e){ return d; } }
+  // 状态映射，用于在 UI 中显示中文状态
+  const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
+  function statusText(s){ return statusMap[s] || s || ''; }
+
+    function renderPage(){
+      if(!paymentsData || !paymentsData.length){ paymentsList.innerHTML = '<div class="small">没有充值凭证。</div>'; return; }
+      // apply filter
+      const filtered = paymentsData.filter(it => {
+        if(currentFilter === 'pending') return (it.status || 'pending') === 'pending';
+        return true;
+      });
+      const total = filtered.length;
+      const pageCount = Math.max(1, Math.ceil(total / pageSize));
+      if(currentPage > pageCount) currentPage = pageCount;
+      const start = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(start, start + pageSize);
+
+      paymentsList.innerHTML = '';
+      if(!pageItems.length){ paymentsList.innerHTML = '<div class="small">此页无数据。</div>'; }
+      pageItems.forEach(it => {
+        const wrap = document.createElement('div');
+        wrap.style.border = '1px solid #ddd';
+        wrap.style.padding = '10px';
+        wrap.style.marginBottom = '8px';
+  const title = document.createElement('div');
+  title.innerHTML = `<strong>用户:</strong> ${it.uid || '未知'} &nbsp; <strong>金额(USDT):</strong> ${it.amount || 0} &nbsp; <strong>状态:</strong> ${statusText(it.status || 'pending')}`;
+        const meta = document.createElement('div');
+        meta.className = 'small';
+        meta.style.marginTop = '6px';
+  meta.textContent = `id: ${it.id}  创建时间: ${fmtDate(it.createdAt || it.createdAtISO || it.createdAt)} `;
+        wrap.appendChild(title);
+        wrap.appendChild(meta);
+        if(it.receiptViewUrl || it.receiptUrl){
+          const img = document.createElement('img');
+          img.src = it.receiptViewUrl || it.receiptUrl;
+          img.alt = '收据图片';
+          img.style.maxWidth = '320px';
+          img.style.display = 'block';
+          img.style.marginTop = '8px';
+          // Fallback: if external placeholder cannot be resolved (DNS issues),
+          // replace with an inline SVG data URL placeholder so the UI stays informative.
+          const svgPlaceholder = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180">'
+            + '<rect width="100%" height="100%" fill="#f3f3f3"/>'
+            + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" '
+            + 'font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#666">'
+            + '暂无图片或无法加载</text></svg>'
+          );
+          img.onerror = function(){
+            this.onerror = null;
+            try{ this.src = svgPlaceholder; }catch(e){ /* ignore */ }
+          };
+          wrap.appendChild(img);
+        }
+        // If the payment is still pending show editable adminNote + action buttons
+        if ((it.status || 'pending') === 'pending') {
+          const noteRow = document.createElement('div');
+          noteRow.style.marginTop = '8px';
+          const noteLabel = document.createElement('div');
+          noteLabel.className = 'small';
+          noteLabel.textContent = '审核备注（可选）：';
+          const noteInput = document.createElement('textarea');
+          noteInput.style.width = '100%';
+          noteInput.style.height = '60px';
+          noteInput.placeholder = '填写审核备注（例如：充值凭证清晰/金额不符等），可留空。';
+          noteRow.appendChild(noteLabel);
+          noteRow.appendChild(noteInput);
+          wrap.appendChild(noteRow);
+
+          const btnRow = document.createElement('div');
+          btnRow.style.marginTop = '8px';
+          const approve = document.createElement('button');
+          approve.textContent = '通过';
+          approve.onclick = () => handleAction(it.id, 'approved', noteInput.value);
+          const reject = document.createElement('button');
+          reject.textContent = '拒绝';
+          reject.onclick = () => handleAction(it.id, 'rejected', noteInput.value);
+          btnRow.appendChild(approve);
+          btnRow.appendChild(reject);
+          wrap.appendChild(btnRow);
+
+        } else {
+          // already reviewed - show readonly info
+          const info = document.createElement('div');
+          info.className = 'small';
+          info.style.marginTop = '8px';
+          const noteText = it.adminNote ? (' 备注：' + it.adminNote) : '';
+          info.textContent = '已审核：' + statusText(it.status) + noteText;
+          wrap.appendChild(info);
+        }
+        paymentsList.appendChild(wrap);
+      });
+
+      // pagination controls
+      const pager = document.createElement('div');
+      pager.style.marginTop = '8px';
+      const prev = document.createElement('button');
+      prev.textContent = '上一页';
+      prev.disabled = currentPage <= 1;
+      prev.onclick = () => { if(currentPage>1){ currentPage--; renderPage(); } };
+      const next = document.createElement('button');
+      next.textContent = '下一页';
+      next.style.marginLeft = '8px';
+      next.disabled = currentPage >= pageCount;
+      next.onclick = () => { if(currentPage<pageCount){ currentPage++; renderPage(); } };
+      const info = document.createElement('span');
+      info.className = 'small';
+      info.style.marginLeft = '12px';
+      info.textContent = `第 ${currentPage} / ${pageCount} 页 （共 ${total} 条）`;
+      pager.appendChild(prev);
+      pager.appendChild(next);
+      pager.appendChild(info);
+      paymentsList.appendChild(pager);
+    }
+
+    async function handleAction(id, action, adminNote){
+      const actionMap = { approved: '通过', rejected: '拒绝' };
+  const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
+      if(!ok) return;
+      paymentsStatus('提交中...');
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      try{
+        const r = await fetch('/api/admin/payments', {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', 'x-admin-secret': secret },
+          body: JSON.stringify({ id, action, adminNote: adminNote || null })
+        });
+        const j = await r.json().catch(()=>({ok:false}));
+        if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
+        paymentsStatus('操作成功，刷新列表...');
+        await loadPayments();
+      }catch(e){ paymentsStatus('操作失败: ' + e.message); }
+    }
+
+    $('#loadPayments').onclick = loadPayments;
   </script>
 </body>
 </html>
