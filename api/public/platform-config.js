@@ -53,14 +53,14 @@ module.exports = async (req, res) => {
             else if (quote === 'KRW') displayRates.KRW = val;
             else if (quote === 'JPY') displayRates.JPY = val;
             else if (quote === 'USD') displayRates.USD = val;
-          }catch(e){ console.log('[public/platform-config] parse rate error', e && e.message); }
+          }catch(e){ console.error('[public/platform-config] parse rate error', e && (e.stack || e.message)); }
         });
-      }catch(e){ console.log('[public/platform-config] read rates error', e && e.message); }
+  }catch(e){ console.error('[public/platform-config] read rates error', e && (e.stack || e.message)); }
       let platformDeposit = null;
       try{
         const doc = await fs.collection('synced_platform_config').doc('platform').get();
         if (doc && doc.exists) platformDeposit = doc.data();
-      }catch(e){ console.log('[public/platform-config] read platform config error', e && e.message); }
+  }catch(e){ console.error('[public/platform-config] read platform config error', e && (e.stack || e.message)); }
       return json(res, 200, { ok:true, displayRates, platformDeposit, debug:{ source:'firestore', envHasFirestore: true } });
     }
     // fallback to mongo if firestore not available
@@ -79,18 +79,18 @@ module.exports = async (req, res) => {
             else if (quote === 'KRW') displayRates.KRW = val;
             else if (quote === 'JPY') displayRates.JPY = val;
             else if (quote === 'USD') displayRates.USD = val;
-          } catch(e){ console.log('[public/platform-config] parse rate error', e && e.message); }
+          } catch(e){ console.error('[public/platform-config] parse rate error', e && (e.stack || e.message)); }
         }
-      } catch(e){ console.log('[public/platform-config] read rates error', e && e.message); }
+  } catch(e){ console.error('[public/platform-config] read rates error', e && (e.stack || e.message)); }
       let platformDeposit = null;
       try {
         const arr = await mg.db.collection('synced_platform_config').find({}).sort({ _id:-1 }).limit(1).toArray();
         platformDeposit = arr[0] || null;
-      } catch(e){ console.log('[public/platform-config] read platform config error', e && e.message); }
+  } catch(e){ console.error('[public/platform-config] read platform config error', e && (e.stack || e.message)); }
       // include a short-lived debug field so we can see if response used mongo
       return json(res, 200, { ok:true, displayRates, platformDeposit, debug:{ source:'mongo', envHasMongo: !!process.env.MONGODB_URI } });
     }
-  } catch(e){ console.log('[public/platform-config] outer error', e && e.message); }
+  } catch(e){ console.error('[public/platform-config] outer error', e && (e.stack || e.message)); }
   // Fallback to memory if no mongo
   try {
     const MEM = require('../../lib/inmemory');
