@@ -1,0 +1,15 @@
+# Exclude build artifacts and large files from Vercel deployments
+node_modules/
+*.apk
+*.aab
+android/**/build/
+ios/**/build/
+*.keystore
+*.log
+*.zip
+*.tar
+/.git/
+/.expo/
+dist/
+build/
+*.iml

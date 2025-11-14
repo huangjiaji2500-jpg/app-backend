@@ -1,6 +1,22 @@
 // Public endpoint: /api/public/platform-config
 // Returns minimal public configuration used by clients: displayRates and platformDeposit
 const DEFAULT_DISPLAY = { USD:1, CNY:11, KRW:2250, JPY:237 };
+
+// Firebase initialization via Base64 env (if provided)
+const admin = require('firebase-admin');
+let serviceAccount = null;
+if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+  try {
+    serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8'));
+  } catch (e) { /* ignore, fallback below */ }
+}
+if (!serviceAccount && process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try { serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT); } catch(e) { /* ignore */ }
+}
+if (serviceAccount && (!admin.apps || admin.apps.length === 0)) {
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+}
+const db = (admin.apps && admin.apps.length) ? admin.firestore() : null;
 async function getMongo(){
   let mongoCached = null;
   if (mongoCached) return mongoCached;

@@ -1,5 +1,20 @@
 const admin = require('firebase-admin');
 
+// Initialize Firebase from Base64 env or direct JSON env
+let serviceAccount = null;
+if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+  try {
+    serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf8'));
+  } catch(e) { /* ignore and fallback */ }
+}
+if (!serviceAccount && process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try { serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT); } catch(e) { /* ignore */ }
+}
+if (serviceAccount && (!admin.apps || admin.apps.length === 0)) {
+  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+}
+const db = (admin.apps && admin.apps.length) ? admin.firestore() : null;
+
 module.exports = async (req, res) => {
   // Only accept POST
   if (req.method !== 'POST') {
@@ -27,18 +42,9 @@ module.exports = async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Nothing to update (expect displayRates or platformDeposit)' });
   }
 
-  // init firebase admin if needed
-  try {
-    if (!admin.apps.length) {
-      const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
-      if (!sa) return res.status(500).json({ ok: false, error: 'FIREBASE_SERVICE_ACCOUNT env missing' });
-      let cred;
-      try { cred = JSON.parse(sa); } catch (e) { return res.status(500).json({ ok: false, error: 'FIREBASE_SERVICE_ACCOUNT JSON parse error' }); }
-      admin.initializeApp({ credential: admin.credential.cert(cred) });
-    }
-
-    const db = admin.firestore();
-    const docRef = db.doc('platform/platform');
+  // Ensure Firebase was initialized at module load time
+  if (!db) return res.status(500).json({ ok: false, error: 'FIREBASE_SERVICE_ACCOUNT env missing or invalid' });
+  const docRef = db.doc('platform/platform');
     const now = new Date().toISOString();
     const payload = { updatedAt: now };
     if (displayRates) payload.displayRates = displayRates;

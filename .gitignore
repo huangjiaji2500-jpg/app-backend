@@ -1,3 +1,16 @@
 .vercel
 
 .expo
+node_modules
+
+# Ignore APKs and Android/iOS build outputs
+*.apk
+*.aab
+*.keystore
+android/**/build/
+ios/**/build/
+
+# Logs and archives
+*.log
+*.zip
+*.tar

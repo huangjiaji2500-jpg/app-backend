@@ -3,7 +3,7 @@ import { View, Text, TextInput, Alert, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import { getDisplayRates, setDisplayRates } from '../services/rates';
-import { fetchRemoteLatest, mergeRemoteData } from '../services/remoteSync';
+import { fetchRemoteLatest, mergeRemoteData, queueRateSync } from '../services/remoteSync';
 import { getRemoteBaseUrl, setRemoteBaseUrl, getSyncSecret, setSyncSecret } from '../services/cloudConfig';
 import { isCurrentUserAdmin } from '../services/auth';
 import useAdminGuard from '../hooks/useAdminGuard';
@@ -43,6 +43,17 @@ export default function RateSettings({ navigation }) {
       const next = await setDisplayRates(payload);
       setDispRates(next);
       setUsd(''); setCny(''); setKrw(''); setJpy('');
+      // 将修改推入远端同步队列（每个币种单独上报为 rate）
+      try {
+        for (const k of Object.keys(payload)){
+          const val = Number(payload[k]);
+          if (isNaN(val) || val <= 0) continue;
+          // 上报为： 1 USDT = ? <CURRENCY>
+          const rate = { base: 'USDT', quote: k.toString().toUpperCase(), value: val, updatedAt: Date.now() };
+          // 不阻塞 UI，异步推入队列并触发发送
+          try { queueRateSync(rate); } catch (e) { /* 忽略队列错误 */ }
+        }
+      } catch (e) { /* ignore */ }
       Alert.alert('成功','平台兑换比例已更新');
     } catch (e) {
       Alert.alert('失败', e.message || '更新失败');

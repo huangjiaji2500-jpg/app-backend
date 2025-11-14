@@ -58,6 +58,25 @@ router.post('/register-firebase', [
 
     await user.save();
 
+    // 同步写入 Firestore（如已配置），以便新注册用户在 Firestore 控制台可见
+    try {
+      const { getFirestore } = require('../../lib/firestore');
+      const firestore = getFirestore();
+      if (firestore) {
+        const docRef = firestore.collection('users').doc(String(user._id));
+        await docRef.set({
+          username: user.username,
+          firebaseUid: user.firebaseUid || null,
+          inviteCode: user.inviteCode || null,
+          registeredAt: user.registeredAt || new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          _id: String(user._id)
+        }, { merge: true });
+      }
+    } catch (e) {
+      console.error('[auth] firestore write failed', e && e.message);
+    }
+
     const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
     res.json({ token, user: { id: user._id, username: user.username, inviteCode: user.inviteCode } });
   } catch (e) {
