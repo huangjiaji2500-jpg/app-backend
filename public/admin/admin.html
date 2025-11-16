@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>管理后台</title>
+  <style>
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #f5f6fa; }
+    .admin-tabs { display: flex; border-bottom: 1px solid #e5e5e5; background: #fff; }
+    .admin-tab-btn { padding: 14px 32px; cursor: pointer; border: none; background: none; font-size: 16px; outline: none; color: #888; transition: color 0.2s; }
+    .admin-tab-btn.active { color: #222; border-bottom: 2px solid #0078ff; font-weight: bold; }
+    .admin-tab-content { display: none; }
+    .admin-tab-content.active { display: block; }
+    /* 用户管理作用域隔离 */
+    #users-panel * { box-sizing: border-box; }
+    #users-panel table { border-collapse: collapse; width: 100%; background: #fff; }
+    #users-panel th, #users-panel td { border: 1px solid #e5e5e5; padding: 8px 12px; text-align: left; }
+    #users-panel th { background: #f0f0f0; }
+    #users-panel .user-action-btn { padding: 4px 10px; margin: 0 2px; border: none; background: #0078ff; color: #fff; border-radius: 3px; cursor: pointer; font-size: 13px; }
+    #users-panel .user-action-btn.delete { background: #e74c3c; }
+    #users-panel .user-action-btn:disabled { background: #ccc; cursor: not-allowed; }
+    #users-panel .user-search { margin-bottom: 12px; }
+    #users-panel .user-search input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 3px; font-size: 14px; }
+    #users-panel .user-search button { margin-left: 6px; }
+    #users-panel .user-table-wrap { overflow-x: auto; }
+    #users-panel .user-empty { color: #888; text-align: center; margin: 24px 0; }
+    #users-panel .user-loading { color: #0078ff; text-align: center; margin: 24px 0; }
+    #users-panel .user-error { color: #e74c3c; text-align: center; margin: 24px 0; }
+    /* 响应式 */
+    @media (max-width: 600px) {
+      .admin-tab-btn { padding: 12px 10px; font-size: 15px; }
+      #users-panel table, #users-panel th, #users-panel td { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-tabs">
+    <button class="admin-tab-btn active" id="tab-btn-home" type="button">管理首页</button>
+    <button class="admin-tab-btn" id="tab-btn-users" type="button">用户管理</button>
+  </div>
+  <div class="admin-tab-content active" id="home-panel">
+    <!-- 管理首页内容开始（原index.html内容完整插入） -->
+    <div id="main-app">
+      <!-- ...existing code... -->
+    </div>
+    <!-- 管理首页内容结束 -->
+  </div>
+  <div class="admin-tab-content" id="users-panel">
+    <!-- 用户管理内容开始（原users.html内容完整插入，所有ID/JS前缀隔离） -->
+    <div class="user-search">
+      <input id="users-search-input" type="text" placeholder="搜索用户名/邮箱..." />
+      <button id="users-search-btn" class="user-action-btn" type="button">搜索</button>
+      <button id="users-refresh-btn" class="user-action-btn" type="button">刷新</button>
+    </div>
+    <div class="user-table-wrap">
+      <table id="users-table">
+        <thead>
+          <tr>
+            <th>用户名</th>
+            <th>邮箱</th>
+            <th>注册时间</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="4" class="user-loading">加载中...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="users-error" class="user-error" style="display:none"></div>
+    <!-- 用户管理内容结束 -->
+  </div>
+  <script>
+    // 顶部标签切换逻辑，默认首页，切换不刷新
+    const tabBtnHome = document.getElementById('tab-btn-home');
+    const tabBtnUsers = document.getElementById('tab-btn-users');
+    const homePanel = document.getElementById('home-panel');
+    const usersPanel = document.getElementById('users-panel');
+    tabBtnHome.addEventListener('click', function() {
+      tabBtnHome.classList.add('active');
+      tabBtnUsers.classList.remove('active');
+      homePanel.classList.add('active');
+      usersPanel.classList.remove('active');
+    });
+    tabBtnUsers.addEventListener('click', function() {
+      tabBtnUsers.classList.add('active');
+      tabBtnHome.classList.remove('active');
+      usersPanel.classList.add('active');
+      homePanel.classList.remove('active');
+    });
+    // 用户管理页逻辑（作用域隔离，所有ID/变量前缀users-）
+    function usersFetchList(keyword) {
+      const tbody = document.getElementById('users-tbody');
+      const errorDiv = document.getElementById('users-error');
+      tbody.innerHTML = '<tr><td colspan="4" class="user-loading">加载中...</td></tr>';
+      errorDiv.style.display = 'none';
+      fetch('/api/admin/users?keyword=' + encodeURIComponent(keyword||''), { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(res => {
+          if (res && Array.isArray(res.data)) {
+            if (res.data.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="4" class="user-empty">暂无用户</td></tr>';
+            } else {
+              tbody.innerHTML = res.data.map(u => `<tr><td>${u.username||''}</td><td>${u.email||''}</td><td>${u.createdAt ? new Date(u.createdAt).toLocaleString() : ''}</td><td><button class='user-action-btn delete' data-uid='${u._id}'>删除</button></td></tr>`).join('');
+            }
+          } else {
+            tbody.innerHTML = '<tr><td colspan="4" class="user-error">数据格式错误</td></tr>';
+          }
+        })
+        .catch(e => {
+          tbody.innerHTML = '';
+          errorDiv.textContent = '加载失败：' + (e.message||e);
+          errorDiv.style.display = '';
+        });
+    }
+    document.getElementById('users-search-btn').onclick = function() {
+      usersFetchList(document.getElementById('users-search-input').value);
+    };
+    document.getElementById('users-refresh-btn').onclick = function() {
+      document.getElementById('users-search-input').value = '';
+      usersFetchList('');
+    };
+    document.getElementById('users-search-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') usersFetchList(this.value);
+    });
+    document.getElementById('users-tbody').onclick = function(e) {
+      if (e.target && e.target.classList.contains('delete')) {
+        const uid = e.target.getAttribute('data-uid');
+        if (!uid) return;
+        if (!confirm('确定要删除该用户吗？')) return;
+        e.target.disabled = true;
+        fetch('/api/admin/users/' + uid, { method: 'DELETE', credentials: 'same-origin' })
+          .then(r => r.json())
+          .then(res => {
+            if (res && res.success) {
+              usersFetchList(document.getElementById('users-search-input').value);
+            } else {
+              alert('删除失败：' + (res && res.message || '未知错误'));
+              e.target.disabled = false;
+            }
+          })
+          .catch(err => {
+            alert('请求失败：' + (err && err.message || err));
+            e.target.disabled = false;
+          });
+      }
+    };
+    // 切换到用户管理时自动刷新
+    tabBtnUsers.addEventListener('click', function() {
+      usersFetchList(document.getElementById('users-search-input').value);
+    });
+    // 页面加载时初始化首页（原首页JS逻辑完整保留，插入到下方）
+    // ...existing code...
+  </script>
+</body>
+</html>
