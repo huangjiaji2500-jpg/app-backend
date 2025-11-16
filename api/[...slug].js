@@ -4,57 +4,8 @@ module.exports = async (req, res) => {
   // req.query.slug will be an array of path segments after /api/
   const slug = Array.isArray(req.query && req.query.slug) ? req.query.slug : (req.url && req.url.split('?')[0].split('/').slice(2)) || [];
 
-  // Route: POST /api/auth/on-login
-  if (slug[0] === 'auth' && slug[1] === 'on-login') {
-    if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
-    const idToken = (req.body && req.body.idToken) || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
-    const deviceId = req.body && req.body.deviceId;
-    if (!idToken) return res.status(400).json({ ok: false, error: 'idToken required' });
-    try {
-      const db = getFirestore();
-      const admin = require('firebase-admin');
-      if (!admin || !admin.auth) return res.status(500).json({ ok: false, error: 'firebase-admin not initialized' });
-      const decoded = await admin.auth().verifyIdToken(idToken);
-      const uid = decoded.uid;
-      const profile = {
-        uid,
-        email: decoded.email || null,
-        displayName: decoded.name || decoded.picture || null,
-        providers: decoded.firebase && decoded.firebase.sign_in_provider ? [decoded.firebase.sign_in_provider] : null,
-        lastLoginAt: new Date().toISOString(),
-      };
-      if (!db) return res.status(500).json({ ok: false, error: 'firestore unavailable' });
-      const userRef = db.doc(`users/${uid}`);
-      const snap = await userRef.get();
-      if (!snap.exists) profile.createdAt = new Date().toISOString();
-      // ensure balance field exists
-      if (!snap.exists || snap.data().balanceUSDT === undefined) profile.balanceUSDT = 0;
-      // merge profile
-      Object.keys(profile).forEach(k => profile[k] === undefined && (profile[k] = null));
-      await userRef.set(profile, { merge: true });
-
-      // handle deviceId: append and dedupe
-      if (deviceId) {
-        try {
-          await db.runTransaction(async tx => {
-            const uSnap = await tx.get(userRef);
-            const cur = (uSnap.exists && uSnap.data().deviceIds) ? uSnap.data().deviceIds : [];
-            const set = new Set(Array.isArray(cur) ? cur : []);
-            set.add(deviceId);
-            const arr = Array.from(set);
-            tx.set(userRef, { deviceIds: arr }, { merge: true });
-          });
-        } catch (e) {
-          console.error('[api][auth/on-login] deviceId tx error', e && (e.stack || e.message));
-        }
-      }
-
-      return res.status(200).json({ ok: true, uid });
-    } catch (e) {
-      console.error('[api][auth/on-login] error', e && (e.stack || e.message));
-      return res.status(500).json({ ok: false, error: 'token verification failed' });
-    }
-  }
+  // NOTE: Mobile app login endpoint removed. Previously handled POST /api/auth/on-login.
+  // The mobile/app login handler `api/auth/on-login.js` has been deleted to keep only web admin.
 
   // Route: GET /api/admin/users
   if (slug[0] === 'admin' && slug[1] === 'users') {
@@ -75,7 +26,6 @@ module.exports = async (req, res) => {
       return res.status(500).json({ ok: false, error: 'internal' });
     }
   }
-
 
 
   return res.status(404).json({ ok: false, error: 'not-found' });
