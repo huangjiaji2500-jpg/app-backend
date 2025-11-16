@@ -1,44 +1,46 @@
 {
-  "expo": {
-    "name": "Uπ",
-    "slug": "usdt-trading-app",
-    "scheme": "usdtapp",
-    "version": "1.0.1",
-    "orientation": "portrait",
-    "icon": "assets/icon.png",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "updates": {
-      "enabled": true,
-      "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0,
-      "url": "https://u.expo.dev/4ebe48a7-29a8-4c8d-92c6-5a91559dfe5c"
-    },
-    "runtimeVersion": {
-      "policy": "sdkVersion"
-    },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
-    "ios": {
-      "supportsTablet": true
-    },
-    "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#FFFFFF"
-      },
-      "package": "com.huangjiaji2500.usdttradingapp"
-    },
-    "web": {},
-    "extra": {
-      "remoteBaseUrl": "https://app-tau-gilt-23.vercel.app",
-      "syncSecret": "huangjiaji199011280016",
-      "cloudEnabled": true,
-      "eas": {
-        "projectId": "4ebe48a7-29a8-4c8d-92c6-5a91559dfe5c"
-      }
-    }
-  }
+    "expo":  {
+                 "name":  "Uπ",
+                 "slug":  "usdt-trading-app",
+                 "scheme":  "usdtapp",
+                 "version":  "1.0.1",
+                 "orientation":  "portrait",
+                 "icon":  "assets/icon.png",
+                 "splash":  {
+                                "resizeMode":  "contain",
+                                "backgroundColor":  "#ffffff"
+                            },
+                 "updates":  {
+                                 "enabled":  true,
+                                 "checkAutomatically":  "ON_LOAD",
+                                 "fallbackToCacheTimeout":  0,
+                                 "url":  "https://u.expo.dev/4ebe48a7-29a8-4c8d-92c6-5a91559dfe5c"
+                             },
+                 "runtimeVersion":  {
+                                        "policy":  "sdkVersion"
+                                    },
+                 "assetBundlePatterns":  [
+                                             "**/*"
+                                         ],
+                 "ios":  {
+                             "supportsTablet":  true
+                         },
+                 "android":  {
+                                 "adaptiveIcon":  {
+                                                      "backgroundColor":  "#FFFFFF"
+                                                  },
+                                 "package":  "com.huangjiaji2500.usdttradingapp"
+                             },
+                 "web":  {
+
+                         },
+                 "extra":  {
+                               "remoteBaseUrl":  "https://serena-didynamous-rosina.ngrok-free.dev",
+                               "syncSecret":  "huangjiaji199011280016",
+                               "cloudEnabled":  true,
+                               "eas":  {
+                                           "projectId":  "4ebe48a7-29a8-4c8d-92c6-5a91559dfe5c"
+                                       }
+                           }
+             }
 }

@@ -10,6 +10,15 @@ const FIXED_ADMIN_PASSWORD = 'jiaji886';
 
 // 本地模拟：使用 AsyncStorage 维护用户表（仅供测试）
 const LOCAL_KEY = 'LOCAL_AUTH_USERS';
+const DEVICE_KEY = 'DEVICE_ID';
+
+async function getDeviceId() {
+  let id = await AsyncStorage.getItem(DEVICE_KEY);
+  if (id) return id;
+  id = `dev_${Date.now()}_${Math.random().toString(36).slice(2,10)}`;
+  await AsyncStorage.setItem(DEVICE_KEY, id);
+  return id;
+}
 
 async function getLocalUsers() {
   const raw = await AsyncStorage.getItem(LOCAL_KEY);
@@ -96,7 +105,8 @@ export async function registerWithUsernamePassword({ username, password, inviteC
 
     // 后端创建用户文档
     try {
-      const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode });
+      const deviceId = await getDeviceId();
+      const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
       const token = resp.data?.token;
       if (token) {
         global.__AUTH_TOKEN__ = token;
@@ -111,7 +121,8 @@ export async function registerWithUsernamePassword({ username, password, inviteC
     const email = usernameToEmail(username);
     const userCred = await createUserWithEmailAndPassword(auth, email, password);
     const firebaseUid = userCred.user.uid;
-    const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode });
+  const deviceId = await getDeviceId();
+  const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
     const token = resp.data?.token;
     global.__AUTH_TOKEN__ = token;
     await AsyncStorage.setItem('AUTH_TOKEN', token);
@@ -125,7 +136,26 @@ export async function loginWithUsernamePassword({ username, password }) {
     const users = await getLocalUsers();
     const u = users[username];
     if (!u) throw new Error('用户不存在');
-    if (u.passwordHash !== password) throw new Error('密码不匹配');
+    // 支持两类 passwordHash：
+    // 1) 明文（旧实现）
+    // 2) salt$derivedHex（管理员生成的临时密码经过 scrypt 后的格式）
+    if (typeof u.passwordHash === 'string' && u.passwordHash.includes('$')) {
+      // salt$derivedHex
+      let ok = false;
+      try {
+        // eslint-disable-next-line global-require
+        const crypto = require('crypto');
+        const [salt, derivedHex] = u.passwordHash.split('$');
+        const candidate = crypto.scryptSync(password, salt, 64).toString('hex');
+        ok = candidate === derivedHex;
+      } catch (e) {
+        // 如果 crypto 不可用，则回退到明文对比（保持兼容）
+        ok = u.passwordHash === password;
+      }
+      if (!ok) throw new Error('密码不匹配');
+    } else {
+      if (u.passwordHash !== password) throw new Error('密码不匹配');
+    }
     if (u.mustChangePassword) {
       // 允许登录但标记需要立即修改密码；调用方应根据此返回值跳转到强制修改页
       await AsyncStorage.setItem('CURRENT_USERNAME', username);
@@ -135,7 +165,8 @@ export async function loginWithUsernamePassword({ username, password }) {
     await ensureUserProfile(username);
     // 获取后端JWT
     try {
-      const resp = await api.post('/auth/login-firebase', { firebaseUid: u.firebaseUid });
+      const deviceId = await getDeviceId();
+      const resp = await api.post('/auth/login-firebase', { firebaseUid: u.firebaseUid, deviceId });
       const token = resp.data?.token;
       global.__AUTH_TOKEN__ = token;
       await AsyncStorage.setItem('AUTH_TOKEN', token);
@@ -148,11 +179,30 @@ export async function loginWithUsernamePassword({ username, password }) {
     await setLocalUsers(users);
     return { uid: u.firebaseUid };
   } else {
+    // 优先尝试使用后端的临时密码登录（若用户刚被管理员重置）
+    try {
+      const deviceId = await getDeviceId();
+      const tempResp = await api.post('/auth/login-temp', { username, password, deviceId });
+      const token = tempResp.data?.token;
+      if (token) {
+        global.__AUTH_TOKEN__ = token;
+        await AsyncStorage.setItem('AUTH_TOKEN', token);
+        await AsyncStorage.setItem('CURRENT_USERNAME', username);
+        if (tempResp.data?.mustChangePassword) {
+          return { uid: tempResp.data.user?.id || tempResp.data.user?.uid, mustChangePassword: true };
+        }
+        return { uid: tempResp.data.user?.id || tempResp.data.user?.uid };
+      }
+    } catch (e) {
+      // 若后端未配置该路由或验证失败，退回到 Firebase 登录流程
+    }
+
     const { auth, signInWithEmailAndPassword } = await import('./firebase');
     const email = usernameToEmail(username);
     const cred = await signInWithEmailAndPassword(auth, email, password);
     const firebaseUid = cred.user.uid;
-    const resp = await api.post('/auth/login-firebase', { firebaseUid });
+    const deviceId = await getDeviceId();
+    const resp = await api.post('/auth/login-firebase', { firebaseUid, deviceId });
     const token = resp.data?.token;
     global.__AUTH_TOKEN__ = token;
     await AsyncStorage.setItem('AUTH_TOKEN', token);
@@ -216,11 +266,25 @@ export async function promoteCurrentUserToAdmin({ code } = {}) {
 export async function adminResetUserPassword(targetUsername) {
   const users = await getLocalUsers();
   if (!users[targetUsername]) throw new Error('用户不存在');
-  // 生成随机 6 位：字母+数字
+  // 生成随机 8 位：字母+数字（与后端保持一致）
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
   let temp = '';
-  for (let i=0;i<6;i++){ temp += chars[Math.floor(Math.random()*chars.length)]; }
-  users[targetUsername].passwordHash = temp; // 临时明文作为 hash（后续用户修改后再变更）
+  for (let i=0;i<8;i++){ temp += chars[Math.floor(Math.random()*chars.length)]; }
+
+  // 尝试使用 Node 的 crypto.scryptSync，如果不可用则回退到明文（兼容旧环境）
+  let stored = temp;
+  try {
+    // eslint-disable-next-line global-require
+    const crypto = require('crypto');
+    const salt = crypto.randomBytes(16).toString('hex');
+    const derived = crypto.scryptSync(temp, salt, 64).toString('hex');
+    stored = `${salt}$${derived}`;
+  } catch (e) {
+    // 在 React Native 环境下可能无法 require('crypto')，保留明文以保持兼容性
+    // (在生产/后端环境中应有 crypto 可用)
+  }
+
+  users[targetUsername].passwordHash = stored; // 使用 salt$derivedHex 格式或回退为明文
   users[targetUsername].mustChangePassword = true;
   await setLocalUsers(users);
   return { username: targetUsername, tempPassword: temp };
@@ -235,9 +299,24 @@ export async function changePasswordAfterReset({ newPassword }) {
   const u = users[username];
   if (!u) throw new Error('用户不存在');
   if (!u.mustChangePassword) throw new Error('无需修改密码');
-  u.passwordHash = newPassword;
-  u.mustChangePassword = false;
-  u.updatedAt = Date.now();
-  await setLocalUsers(users);
-  return { ok:true };
+  // 如果启用本地模拟认证，使用本地存储逻辑
+  if (USE_LOCAL_AUTH) {
+    u.passwordHash = newPassword;
+    u.mustChangePassword = false;
+    u.updatedAt = Date.now();
+    await setLocalUsers(users);
+    return { ok:true };
+  }
+
+  // 真实后端流程：调用后端 API /auth/change-temp-password（需要 Authorization header）
+  try {
+    // 确保 token 在全局或 AsyncStorage 中存在，api 会自动附加 global.__AUTH_TOKEN__（见 src/services/api.js）
+    const resp = await api.post('/auth/change-temp-password', { newPassword });
+    // 成功后，让客户端状态同步：尝试更新本地 CURRENT_USERNAME 标志
+    await AsyncStorage.setItem('CURRENT_USERNAME', username);
+    return { ok: true };
+  } catch (e) {
+    // 将后端错误透传给调用者
+    throw e;
+  }
 }

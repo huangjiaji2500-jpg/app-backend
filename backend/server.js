@@ -49,6 +49,13 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/usdt_trad
 // 路由
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
+// 挂载 serverless 风格的 admin users 接口（来自项目根目录的 api/admin/users.js）
+try {
+  const adminUsersHandler = require('../api/admin/users');
+  app.use('/api/admin/users', (req, res) => adminUsersHandler(req, res));
+} catch (e) {
+  console.warn('admin users handler not mounted:', e && e.message);
+}
 app.use('/api/trading', tradingRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/team', teamRoutes);

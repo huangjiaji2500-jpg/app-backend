@@ -15,6 +15,3 @@ build/
 *.iml
 
 # Exclude project-internal or temporary API routes from Hobby deployments
-/api/sync/
-/api/debug/
-/api/sync.js

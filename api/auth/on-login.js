@@ -31,6 +31,27 @@ module.exports = async (req, res) => {
     if (!snap.exists) {
       profile.createdAt = new Date().toISOString();
     }
+    // If caller provided a deviceId (from mobile client), record it in user's devices map
+    // Accept from request body { deviceId } or header 'x-device-id'
+    try {
+      const deviceId = (req.body && req.body.deviceId) || (req.headers['x-device-id'] || req.headers['x-deviceid']);
+      if (deviceId) {
+        const now = Date.now();
+        const existing = snap.exists ? (snap.data().devices || {}) : {};
+        // normalize to string key
+        const idKey = deviceId.toString();
+        const existingEntry = existing[idKey] || {};
+        existing[idKey] = {
+          firstSeen: existingEntry.firstSeen || now,
+          lastSeen: now
+        };
+        // attach merged devices map to profile so merge write will update it
+        profile.devices = existing;
+      }
+    } catch (err) {
+      // non-fatal: continue without devices
+      console.warn('[auth/on-login] device merge failed', err && (err.stack || err.message));
+    }
     // remove undefined values -> ensure nulls instead
     Object.keys(profile).forEach(k => profile[k] === undefined && (profile[k] = null));
     await userRef.set(profile, { merge: true });

@@ -22,6 +22,7 @@
   <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
     <div style="margin-top:6px">
       <button id="saveSecret">保存到 sessionStorage</button>
+      <button id="openUsers" style="margin-left:8px">用户管理</button>
       <button id="clearSecret">清除</button>
     </div>
   </div>
@@ -285,6 +286,9 @@
     }
 
     $('#loadPayments').onclick = loadPayments;
+    // 打开用户管理页面
+    const openBtn = document.getElementById('openUsers');
+    if(openBtn) openBtn.onclick = () => { window.open('/admin/users.html', '_blank'); };
   </script>
 </body>
 </html>

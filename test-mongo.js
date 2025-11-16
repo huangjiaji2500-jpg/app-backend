@@ -1,20 +1,18 @@
-const uri = process.argv[2];
-if (!uri) { console.error('Usage: node test-mongo.js "<MONGODB_URI>"'); process.exit(1); }
+const { MongoClient } = require('mongodb');
+// 直接写死连接信息，不用环境变量，小白友好！
+const uri = "mongodb://app_sync_tester:jiaji250@cluster0-shard-00-00.wklrwgi.mongodb.net:27017/?ssl=true&authSource=admin&retryWrites=true&directConnection=true";
 
-(async () => {
+const client = new MongoClient(uri);
+
+async function run() {
   try {
-    const { MongoClient } = require('mongodb');
-    const client = new MongoClient(uri, { serverSelectionTimeoutMS: 5000 });
-    console.log('Trying to connect...');
     await client.connect();
-    console.log('Connected OK, pinging...');
-    const db = client.db(process.env.MONGODB_DB || 'usdt_trading');
-    await db.command({ ping: 1 });
-    console.log('Ping ok. DB:', db.databaseName);
+    await client.db("admin").command({ ping: 1 });
+    console.log("✅ MongoDB连接成功！终于搞定啦~");
+  } catch (err) {
+    console.log("❌ 连接失败，错误信息：", err.message);
+  } finally {
     await client.close();
-    process.exit(0);
-  } catch (e) {
-    console.error('Connect error:', e && e.message ? e.message : e);
-    process.exit(2);
   }
-})();
+}
+run();
