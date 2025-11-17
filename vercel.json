@@ -2,17 +2,14 @@
   "rewrites": [
     { "source": "/", "destination": "/admin/admin.html" },
     { "source": "/admin", "destination": "/admin/admin.html" },
-    // Back-compat: map old per-endpoint API paths to merged index handlers
     { "source": "/api/admin/users", "destination": "/api/admin?action=users" },
     { "source": "/api/admin/payments", "destination": "/api/admin?action=payments" },
     { "source": "/api/admin/set-platform-config", "destination": "/api/admin?action=set-platform-config" },
-
     { "source": "/api/sync/list", "destination": "/api/sync?action=list" },
     { "source": "/api/sync/payment-method", "destination": "/api/sync?action=payment-method" },
     { "source": "/api/sync/platform-deposit", "destination": "/api/sync?action=platform-deposit" },
     { "source": "/api/sync/rate", "destination": "/api/sync?action=rate" },
     { "source": "/api/sync/user", "destination": "/api/sync?action=user" },
-
     { "source": "/api/debug/last-admin-post", "destination": "/api/debug?action=last-admin-post" },
     { "source": "/api/debug/mongo", "destination": "/api/debug?action=mongo" }
   ]
