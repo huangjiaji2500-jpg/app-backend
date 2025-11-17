@@ -7,7 +7,15 @@ export default async function handler(req, res) {
     const headerSecret = (req.headers['x-admin-secret'] || '').toString();
     const envSecret = process.env.ADMIN_PANEL_SECRET || process.env.SYNC_SECRET;
     if (!envSecret) return res.status(500).json({ ok: false, error: 'Server misconfiguration: ADMIN_PANEL_SECRET not set' });
-    if (!headerSecret || headerSecret !== envSecret) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+    // allow read-only GET requests from same-origin admin UI even if header is missing
+    const isAuthorized = headerSecret && headerSecret === envSecret;
+    if (!isAuthorized) {
+      const referer = (req.headers.referer || req.headers.referrer || '').toString();
+      const host = (req.headers.host || '').toString();
+      if (!(req.method === 'GET' && referer && host && referer.includes(host))) {
+        return res.status(401).json({ ok: false, error: 'Unauthorized' });
+      }
+    }
     try {
       const db = getFirestore();
       if (!db) return res.status(500).json({ ok: false, error: 'firestore not initialized' });
@@ -204,7 +212,15 @@ export default async function handler(req, res) {
     const headerSecret = (req.headers['x-admin-secret'] || '').toString();
     const envSecret = process.env.ADMIN_PANEL_SECRET || process.env.SYNC_SECRET;
     if (!envSecret) return res.status(500).json({ ok: false, error: 'Server misconfiguration: ADMIN_PANEL_SECRET not set' });
-    if (!headerSecret || headerSecret !== envSecret) return res.status(401).json({ ok: false, error: 'Unauthorized' });
+    // allow GET from same-origin admin UI for listing users
+    const isAuthorized2 = headerSecret && headerSecret === envSecret;
+    if (!isAuthorized2) {
+      const referer = (req.headers.referer || req.headers.referrer || '').toString();
+      const host = (req.headers.host || '').toString();
+      if (!(method === 'GET' && referer && host && referer.includes(host))) {
+        return res.status(401).json({ ok: false, error: 'Unauthorized' });
+      }
+    }
     try {
       const db = getFirestore();
       if (!db) return res.status(500).json({ ok: false, error: 'firestore not initialized' });
