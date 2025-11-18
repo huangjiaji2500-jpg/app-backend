@@ -4,7 +4,8 @@ import { Platform } from 'react-native';
 // 运行时决定 API 地址：优先使用构建时注入的 process.env.API_BASE_URL
 // 否则默认指向本机开发服务器。注意：Android 模拟器内的 `localhost` 指向模拟器自身，
 // 需要使用 `10.0.2.2` 访问宿主机上的服务（Android Emulator）。
-let API_BASE_URL = (process && process.env && process.env.API_BASE_URL) ? process.env.API_BASE_URL : 'http://localhost:3000/api';
+// 后端在仓库 dev 环境使用 3001 端口（见 backend/.env），将默认地址改为 3001
+let API_BASE_URL = (process && process.env && process.env.API_BASE_URL) ? process.env.API_BASE_URL : 'http://localhost:3001/api';
 try {
   if (API_BASE_URL.includes('localhost') && Platform.OS === 'android') {
     API_BASE_URL = API_BASE_URL.replace('localhost', '10.0.2.2');
