@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
 import { ensureUserProfile, registerInvitationIfAny } from './team';
 // 从配置读取是否启用本地模拟认证（默认：生产环境 false，开发环境 true）
-const { USE_LOCAL_AUTH } = require('../config');
+import { USE_LOCAL_AUTH } from '../config';
 
 const FIXED_ADMIN_USERNAME = 'jiaji250';
 const FIXED_ADMIN_PASSWORD = 'jiaji886';
