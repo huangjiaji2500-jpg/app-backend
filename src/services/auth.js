@@ -129,12 +129,31 @@ export async function registerWithUsernamePassword({ username, password, inviteC
     return { uid: firebaseUid };
   } else {
     // 真实 Firebase 实现（示例）
-    const { auth, createUserWithEmailAndPassword } = await import('./firebase');
-    const email = usernameToEmail(username);
-    const userCred = await createUserWithEmailAndPassword(auth, email, password);
-    const firebaseUid = userCred.user.uid;
-  const deviceId = await getDeviceId();
-  const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
+    try {
+      const mod = await import('./firebase');
+      const { auth, createUserWithEmailAndPassword } = mod;
+      if (typeof createUserWithEmailAndPassword === 'function') {
+        const email = usernameToEmail(username);
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        const firebaseUid = userCred.user.uid;
+        const deviceId = await getDeviceId();
+        const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
+        const token = resp.data?.token;
+        global.__AUTH_TOKEN__ = token;
+        await AsyncStorage.setItem('AUTH_TOKEN', token);
+        await AsyncStorage.setItem('CURRENT_USERNAME', username);
+        return { uid: firebaseUid };
+      }
+    } catch (e) {
+      // 如果无法加载或调用 Firebase 客户端（例如未安装），回退到直接调用后端注册，
+      // 使用随机生成的 firebaseUid 保证后端用户文档唯一性。
+      console.warn('[auth] firebase client not available, falling back to backend-only registration', e && e.message);
+    }
+
+    // 回退逻辑：生成一个伪 firebaseUid 并直接调用后端注册接口
+    const firebaseUid = `no-fb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const deviceId = await getDeviceId();
+    const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
     const token = resp.data?.token;
     global.__AUTH_TOKEN__ = token;
     await AsyncStorage.setItem('AUTH_TOKEN', token);
