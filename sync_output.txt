@@ -1,0 +1,65 @@
+﻿--- x-sync-signature ---
+c641b32e389ffa67e0e91542f4c9f4b7166a9bc903d42807cbd58401e87f71e7
+
+--- request body ---
+
+{
+    "platformDeposit":  {
+                            "qrImage":  "https://app-tau-gilt-23.vercel.app/uploads/qrcode.png",
+                            "note":  "平台充值（TRC20）",
+                            "address":  "TYfGGw8W2YPX3edLwQL5sMBBA57TuntQwu"
+                        },
+    "ts":  1763456868144
+}
+
+--- POST /api/sync/platform-deposit ---
+
+SYNC ERROR:
+Invoke-RestMethod : {"error":"bad_signature"}
+所在位置 行:1 字符: 1038
++ ... $syncResp = Invoke-RestMethod -Uri 'https://app-tau-gilt-23.vercel.ap ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-Re 
+   stMethod]，WebException
+    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestM 
+   ethodCommand
+
+
+--- GET /api/public/platform-config ---
+
+{
+    "ok":  true,
+    "displayRates":  {
+                         "USD":  1.27,
+                         "CNY":  9,
+                         "KRW":  1851,
+                         "JPY":  195
+                     },
+    "platformDeposit":  {
+                            "note":  "test from script",
+                            "address":  "TK_ADMIN_TEST_ADDRESS",
+                            "qrImage":  "",
+                            "_id":  "platform",
+                            "syncedAt":  1762969142288,
+                            "displayRates":  {
+
+                                             },
+                            "configVersion":  12,
+                            "updatedAt":  "2025-11-18T08:46:00.748Z",
+                            "platformDeposit":  {
+                                                    "note":  "????(TRC20)",
+                                                    "address":  "TYfGGw8W2YPX3edLwQL5sMBBA57TuntQwu",
+                                                    "qrImage":  "https://app-tau-gilt-23.vercel.app/uploads/qrcode.png",
+                                                    "updatedAt":  1763455560750
+                                                }
+                        },
+    "debug":  {
+                  "source":  "firestore",
+                  "envHasFirestore":  true
+              }
+}
+
+--- attempt QR download ---
+
+QR URL: https://app-tau-gilt-23.vercel.app/uploads/qrcode.png
+Downloaded file: qrcode_verify.png Size: 699 bytes
