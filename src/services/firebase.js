@@ -1,10 +1,10 @@
 // 真实 Firebase 接入（可选）。
-// 如需切换到真实 Firebase：
-// 1) 将 USE_LOCAL_AUTH 设为 false（见 src/services/auth.js）
-// 2) 填入下方配置即可，无需改其他代码。
+// 运行时动态加载 firebase client：如果项目没有安装客户端 `firebase`，
+// 使用占位函数并在运行时抛出明确错误，避免 Metro 在打包阶段无法解析模块。
 
-import { initializeApp } from 'firebase/app';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+let auth = null;
+let createUserWithEmailAndPassword = async () => { throw new Error('firebase client not installed'); };
+let signInWithEmailAndPassword = async () => { throw new Error('firebase client not installed'); };
 
 const firebaseConfig = {
   apiKey: 'YOUR_FIREBASE_API_KEY',
@@ -15,6 +15,17 @@ const firebaseConfig = {
   appId: 'YOUR_APP_ID',
 };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export { createUserWithEmailAndPassword, signInWithEmailAndPassword };
+try {
+  // 使用 eval('require') 绕开打包时静态解析（Metro 会尝试解析顶层 import/require）
+  const _require = eval('require');
+  const { initializeApp } = _require('firebase/app');
+  const { getAuth, createUserWithEmailAndPassword: _create, signInWithEmailAndPassword: _signIn } = _require('firebase/auth');
+  const app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  createUserWithEmailAndPassword = _create;
+  signInWithEmailAndPassword = _signIn;
+} catch (e) {
+  // 未安装 firebase client，保持占位实现（在调用时会抛错），以防打包失败
+}
+
+export { auth, createUserWithEmailAndPassword, signInWithEmailAndPassword };
