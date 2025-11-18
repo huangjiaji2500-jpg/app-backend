@@ -1,9 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
 import { ensureUserProfile, registerInvitationIfAny } from './team';
-
-// 可切换为真实 Firebase 实现：只需将 USE_LOCAL_AUTH 设为 false，并在 firebase.js 填入配置。
-const USE_LOCAL_AUTH = true;
+// 从配置读取是否启用本地模拟认证（默认：生产环境 false，开发环境 true）
+const { USE_LOCAL_AUTH } = require('../config');
 
 const FIXED_ADMIN_USERNAME = 'jiaji250';
 const FIXED_ADMIN_PASSWORD = 'jiaji886';
@@ -103,7 +102,7 @@ export async function registerWithUsernamePassword({ username, password, inviteC
     await ensureUserProfile(username);
     await registerInvitationIfAny({ username, inviteCode });
 
-    // 后端创建用户文档
+    // 后端创建用户文档：如果后端同步失败，则回滚本地用户并抛出错误，避免用户误认为已在后端注册
     try {
       const deviceId = await getDeviceId();
       const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
@@ -112,7 +111,20 @@ export async function registerWithUsernamePassword({ username, password, inviteC
         global.__AUTH_TOKEN__ = token;
         await AsyncStorage.setItem('AUTH_TOKEN', token);
       }
-    } catch {}
+    } catch (e) {
+      // 回滚本地创建的用户
+      try {
+        const users = await getLocalUsers();
+        if (users && users[username]) {
+          delete users[username];
+          await setLocalUsers(users);
+        }
+      } catch (ro) {
+        console.warn('[auth] rollback local user failed', ro && ro.message);
+      }
+      // 将错误抛出给调用者以便前端展示失败信息
+      throw new Error((e && e.message) ? `后端注册失败: ${e.message}` : '后端注册失败');
+    }
     await AsyncStorage.setItem('CURRENT_USERNAME', username);
     return { uid: firebaseUid };
   } else {
