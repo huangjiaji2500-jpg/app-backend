@@ -61,7 +61,15 @@ export default function Register({ navigation, route }) {
       await registerWithUsernamePassword({ username, password, inviteCode });
       Alert.alert(t('register_success_title'), t('register_auto_login_desc'), [{ text: t('enter_home'), onPress: () => navigation.replace('MainTabs') }]);
     } catch (e) {
-      Alert.alert(t('error'), e.message || t('register_failed'));
+      // 展示更详细的错误信息（包含 HTTP 状态和后端消息），便于排查网络/后端问题
+      let details = e && e.message ? e.message : t('register_failed');
+      try {
+        if (e && e.status) details += ` (status: ${e.status})`;
+        if (e && e.serverMessage) details += `\n${typeof e.serverMessage === 'string' ? e.serverMessage : JSON.stringify(e.serverMessage)}`;
+      } catch (ex) {
+        // ignore
+      }
+      Alert.alert(t('error'), details);
     } finally {
       setLoading(false);
     }
