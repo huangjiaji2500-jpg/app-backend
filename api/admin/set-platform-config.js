@@ -107,7 +107,19 @@ module.exports = async (req, res) => {
     // that read from 'synced_platform_config' (e.g. /api/public/platform-config)
     // will see the updated platformDeposit immediately.
     try {
-      await db.collection('synced_platform_config').doc('platform').set({ ...payload, _id: 'platform' }, { merge: true });
+      // If platformDeposit exists, also write a flattened copy at the document root
+      // so clients that expect top-level fields (address/qrImage/note) will read them.
+      const flat = {};
+      if (platformDeposit && typeof platformDeposit === 'object') {
+        if (platformDeposit.address) flat.address = platformDeposit.address;
+        if (platformDeposit.qrImage) flat.qrImage = platformDeposit.qrImage;
+        if (platformDeposit.note) flat.note = platformDeposit.note;
+        // prefer numeric updatedAt from platformDeposit if present, else use nowTs
+        flat.updatedAt = typeof platformDeposit.updatedAt === 'number' ? platformDeposit.updatedAt : nowTs;
+        flat.syncedAt = typeof platformDeposit.syncedAt === 'number' ? platformDeposit.syncedAt : nowTs;
+      }
+      const writeDoc = { ...payload, ...flat, _id: 'platform' };
+      await db.collection('synced_platform_config').doc('platform').set(writeDoc, { merge: true });
     } catch (e) {
       console.warn('[admin/set-platform-config] failed to write synced_platform_config', e && (e.stack || e.message));
     }
