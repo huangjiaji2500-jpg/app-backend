@@ -16,10 +16,6 @@ const teamRoutes = require('./routes/team');
 const paymentRoutes = require('./routes/payment');
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET','POST'] }
-});
 const PORT = process.env.PORT || 3000;
 
 // 中间件
@@ -84,25 +80,36 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
 
-// 启动服务器
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-});
+// 如果直接用 node 启动，则创建 http server + socket.io 并监听端口
+if (require.main === module) {
+  const server = http.createServer(app);
+  const io = new Server(server, {
+    cors: { origin: '*', methods: ['GET','POST'] }
+  });
 
-// Socket.io: 推送模拟成交/返佣动态
-io.on('connection', (socket) => {
-  console.log('Socket connected:', socket.id);
-  socket.emit('ticker', { type: 'welcome', message: '欢迎接入实时动态' });
-});
+  server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 
-// 每 10 秒广播一条模拟动态
-setInterval(() => {
-  const samples = [
-    `用户****成功提现${Math.floor(Math.random()*200+10)} USDT`,
-    `用户****团队返佣${Math.floor(Math.random()*50+5)} USDT`,
-    `用户****订单完成 获得收益${Math.floor(Math.random()*100+20)} USDT`
-  ];
-  const msg = samples[Math.floor(Math.random()*samples.length)];
-  io.emit('ticker', { type: 'event', message: msg, ts: Date.now() });
-}, 10000);
+  // Socket.io: 推送模拟成交/返佣动态
+  io.on('connection', (socket) => {
+    console.log('Socket connected:', socket.id);
+    socket.emit('ticker', { type: 'welcome', message: '欢迎接入实时动态' });
+  });
+
+  // 每 10 秒广播一条模拟动态
+  setInterval(() => {
+    const samples = [
+      `用户****成功提现${Math.floor(Math.random()*200+10)} USDT`,
+      `用户****团队返佣${Math.floor(Math.random()*50+5)} USDT`,
+      `用户****订单完成 获得收益${Math.floor(Math.random()*100+20)} USDT`
+    ];
+    const msg = samples[Math.floor(Math.random()*samples.length)];
+    io.emit('ticker', { type: 'event', message: msg, ts: Date.now() });
+  }, 10000);
+
+} else {
+  // 被其它模块 require（例如 Vercel serverless wrapper）时，导出 app 以便包装
+  module.exports = app;
+}
