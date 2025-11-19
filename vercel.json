@@ -12,9 +12,7 @@
       "memory": 1024,
       "maxDuration": 10
     }
-  }
-}
-{
+  },
   "rewrites": [
     { "source": "/", "destination": "/admin/admin.html" },
     { "source": "/admin", "destination": "/admin/admin.html" },
