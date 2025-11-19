@@ -1,4 +1,20 @@
 {
+  "version": 2,
+  "builds": [
+    { "src": "api/[...all].js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/[...all].js" }
+  ],
+  "functions": {
+    "api/[...all].js": {
+      "runtime": "nodejs18.x",
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  }
+}
+{
   "rewrites": [
     { "source": "/", "destination": "/admin/admin.html" },
     { "source": "/admin", "destination": "/admin/admin.html" },

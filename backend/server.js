@@ -57,6 +57,33 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/team', teamRoutes);
 app.use('/api/payment', paymentRoutes);
 
+// Local debug endpoint for Mongo connectivity (useful when running backend locally)
+app.get('/api/debug/mongo', async (req, res) => {
+  try {
+    const uriPresent = !!process.env.MONGODB_URI;
+    const connState = mongoose.connection ? mongoose.connection.readyState : 0;
+    // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    const info = { ok: true, uri_present: uriPresent, connState };
+
+    if (mongoose.connection && mongoose.connection.db) {
+      try {
+        const admin = mongoose.connection.db.admin();
+        // ping the server
+        await admin.ping();
+        info.mongo = { connected: true, dbName: mongoose.connection.db.databaseName };
+        return res.json(info);
+      } catch (e) {
+        info.mongo = { connected: false, error: (e && e.message) ? e.message.substring(0,300) : 'unknown' };
+        return res.json(info);
+      }
+    }
+
+    return res.json(info);
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e && e.message ? e.message : 'unexpected' });
+  }
+});
+
 // 健康检查端点
 app.get('/health', (req, res) => {
   res.json({ 
