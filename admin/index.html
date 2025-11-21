@@ -11,6 +11,9 @@
     label{font-weight:600}
     .small{font-size:12px;color:#666}
     button{margin-right:8px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    th{background:#f5f5f5}
   </style>
 </head>
 <body>
@@ -43,6 +46,37 @@
     <label>显示汇率（JSON）</label>
     <textarea id="displayRates" placeholder='例如: {"USD":1.27, "CNY":9}'></textarea>
   </div>
+
+  <!-- 用户管理区 -->
+  <hr />
+  <section id="usersSection">
+    <h2>用户管理</h2>
+    <p class="small">请在页面顶部粘贴管理员密钥并保存到 sessionStorage（键：<code>ADMIN_PANEL_SECRET</code>），然后点击“加载用户”。</p>
+    <div style="margin-bottom:12px">
+      <button id="loadUsers">加载用户</button>
+      <input id="q" class="search" placeholder="搜索 userId 或 displayName 或 email" style="width:240px;padding:6px;margin-left:8px" />
+    </div>
+
+    <div id="usersStatus" class="small"></div>
+    <div style="margin-top:12px">
+      <table id="usersTable">
+        <thead>
+          <tr><th>用户ID</th><th>用户名 / 显示名</th><th>邮箱</th><th>注册时间</th><th>最近登录</th><th>设备</th><th>操作</th></tr>
+        </thead>
+        <tbody id="usersBody">
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 详情模态（隐藏） -->
+    <div id="modal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;padding:20px">
+      <div id="modalContent" style="background:#fff;padding:16px;max-width:720px;margin:auto;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.2);">
+        <h3 id="modalTitle">用户详情</h3>
+        <pre id="modalBody" style="white-space:pre-wrap;max-height:400px;overflow:auto;background:#f7f7f7;padding:8px;border:1px solid #eee"></pre>
+        <div style="text-align:right;margin-top:8px"><button id="modalClose">关闭</button></div>
+      </div>
+    </div>
+  </section>
 
   <div class="row">
     <label>平台充值（JSON）</label>
@@ -286,9 +320,104 @@
     }
 
     $('#loadPayments').onclick = loadPayments;
-    // 打开用户管理页面
+    // 打开用户管理区（滚动到页面内）
     const openBtn = document.getElementById('openUsers');
-    if(openBtn) openBtn.onclick = () => { window.open('/admin/users.html', '_blank'); };
+    if(openBtn) openBtn.onclick = () => { const s = document.getElementById('usersSection'); if(s) s.scrollIntoView({behavior:'smooth'}); };
+  </script>
+  <script>
+    // ========== 用户管理脚本 ==========
+    const usersStatusEl = document.getElementById('usersStatus');
+    const usersBody = document.getElementById('usersBody');
+    const qInput = document.getElementById('q');
+
+    function usersStatus(txt){ if(usersStatusEl) usersStatusEl.textContent = txt; }
+
+    async function loadUsers(){
+      usersStatus('加载中...');
+      if(usersBody) usersBody.innerHTML = '';
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      if(!secret){ usersStatus('缺少管理员密钥'); return; }
+      try{
+        const r = await fetch('/api/admin/users', { headers: { 'x-admin-secret': secret } });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json();
+        if(!j.ok) throw new Error(j.error || 'unknown');
+        userRenderUsers(j.users || []);
+        usersStatus(`已加载 ${j.count || (j.users||[]).length} 位用户`);
+      }catch(e){ usersStatus('加载失败: ' + e.message); }
+    }
+
+    function userRenderUsers(list){
+      if(!usersBody) return;
+      usersBody.innerHTML = '';
+      const q = (qInput && qInput.value || '').toLowerCase().trim();
+      const filtered = (list||[]).filter(u=>{
+        if(!q) return true;
+        return (u.id||'').toString().toLowerCase().includes(q) || (u.displayName||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q);
+      });
+      if(filtered.length===0){ usersBody.innerHTML = '<tr><td colspan="7" class="small">无用户</td></tr>'; return; }
+      filtered.forEach(u=>{
+        const tr = document.createElement('tr');
+        const devs = u.devices ? Object.keys(u.devices).map(k=>`${k} (${u.devices[k] && u.devices[k].lastSeen? new Date(u.devices[k].lastSeen).toLocaleString() : ''})`).join('\n') : '';
+        tr.innerHTML = `<td>${u.id||''}</td><td>${u.displayName||''}</td><td>${u.email||''}</td><td>${u.createdAt? new Date(u.createdAt).toLocaleString(): '-'}</td><td>${u.lastLoginAt? new Date(u.lastLoginAt).toLocaleString(): '-'}</td><td><pre style="white-space:pre-wrap;margin:0">${devs}</pre></td><td><button class="viewBtn" data-id="${u.id}">查看</button> <button class="disableBtn" data-id="${u.id}">${u.disabled? '启用':'禁用'}</button> <button class="resetBtn" data-id="${u.id}">生成临时密码（仅显示一次）</button></td>`;
+        usersBody.appendChild(tr);
+      });
+      // attach handlers
+      document.querySelectorAll('#usersBody .viewBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userFetchUserDetail(id); });
+      document.querySelectorAll('#usersBody .disableBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userToggleDisable(id, ev.currentTarget); });
+      document.querySelectorAll('#usersBody .resetBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userResetPassword(id); });
+    }
+
+    // modal handlers
+    if(document.getElementById('modalClose')) document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
+
+    async function userFetchUserDetail(id){
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      if(!secret){ usersStatus('缺少管理员密钥'); return; }
+      usersStatus('加载用户详情...');
+      try{
+        const r = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json(); if(!j.ok) throw new Error(j.error || 'unknown');
+        document.getElementById('modalTitle').textContent = '用户详情 — ' + (j.user && (j.user.username || j.user._id || j.user.id) || id);
+        document.getElementById('modalBody').textContent = JSON.stringify(j.user || j, null, 2);
+        document.getElementById('modal').style.display = 'flex';
+        usersStatus('');
+      }catch(e){ usersStatus('加载详情失败: ' + e.message); }
+    }
+
+    async function userToggleDisable(id, btn){
+      const ok = confirm('确定要切换用户 ' + id + ' 的启用/禁用 状态吗？'); if(!ok) return;
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim(); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+      try{
+        const r0 = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
+        if(!r0.ok) throw new Error(r0.status + ' ' + r0.statusText);
+        const j0 = await r0.json(); if(!j0.ok) throw new Error(j0.error || 'unknown');
+        const cur = !!(j0.user && j0.user.disabled);
+        const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, disabled: !cur }) });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json(); if(!j.ok) throw new Error(j.error || 'unknown');
+        alert('操作成功'); loadUsers();
+      }catch(e){ usersStatus('操作失败: ' + e.message); }
+    }
+
+    async function userResetPassword(id){
+      const ok = confirm('确定要为用户 ' + id + ' 生成临时密码吗？该密码只会显示一次，请及时复制并转交给用户。'); if(!ok) return;
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim(); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+      try{
+        const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, resetPassword: true }) });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json(); if(!j.ok) throw new Error(j.error || 'unknown');
+        const temp = j.update && j.update.tempPassword ? j.update.tempPassword : null;
+        if(temp) alert('已生成临时密码（仅显示一次）：\n' + temp + '\n\n请立即复制并转交给用户；页面不会再次显示该明文密码。');
+        else alert('已标记为需要重置密码（未返回临时密码）');
+        loadUsers();
+      }catch(e){ usersStatus('操作失败: ' + e.message); }
+    }
+
+    // bind
+    if(document.getElementById('loadUsers')) document.getElementById('loadUsers').onclick = loadUsers;
+    if(qInput) qInput.oninput = () => { if(usersBody && usersBody.childElementCount) loadUsers(); };
   </script>
 </body>
 </html>

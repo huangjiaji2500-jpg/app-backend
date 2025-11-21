@@ -1,0 +1,153 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>鐢ㄦ埛绠＄悊锛堢鐞嗗憳锛?/title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:20px}
+    table{border-collapse:collapse;width:100%}
+    th,td{border:1px solid #ddd;padding:8px;text-align:left}
+    th{background:#f5f5f5}
+    .small{font-size:12px;color:#666}
+    input.search{width:240px;padding:6px}
+    button{margin-right:8px}
+  </style>
+</head>
+<body>
+  <h1>鐢ㄦ埛绠＄悊</h1>
+  <p class="small">璇峰湪椤甸潰椤堕儴绮樿创绠＄悊鍛樺瘑閽ュ苟淇濆瓨鍒?sessionStorage锛堥敭锛?code>ADMIN_PANEL_SECRET</code>锛夛紝鐒跺悗鐐瑰嚮鈥滃姞杞界敤鎴封€濄€?/p>
+
+  <div style="margin-bottom:12px">
+    <input id="adminSecret" placeholder="绠＄悊鍛樺瘑閽? style="width:360px" />
+    <button id="saveSecret">淇濆瓨鍒?sessionStorage</button>
+    <button id="loadUsers">鍔犺浇鐢ㄦ埛</button>
+    <input id="q" class="search" placeholder="鎼滅储 userId 鎴?displayName 鎴?email" />
+  </div>
+
+  <div id="status" class="small"></div>
+  <div style="margin-top:12px">
+    <table id="usersTable">
+      <thead>
+        <tr><th>鐢ㄦ埛ID</th><th>鐢ㄦ埛鍚?/ 鏄剧ず鍚?/th><th>閭</th><th>娉ㄥ唽鏃堕棿</th><th>鏈€杩戠櫥褰?/th><th>璁惧</th><th>鎿嶄綔</th></tr>
+      </thead>
+      <tbody id="usersBody">
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 璇︽儏妯℃€?-->
+  <div id="modal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;padding:20px">
+    <div id="modalContent" style="background:#fff;padding:16px;max-width:720px;margin:auto;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.2);">
+      <h3 id="modalTitle">鐢ㄦ埛璇︽儏</h3>
+      <pre id="modalBody" style="white-space:pre-wrap;max-height:400px;overflow:auto;background:#f7f7f7;padding:8px;border:1px solid #eee"></pre>
+      <div style="text-align:right;margin-top:8px"><button id="modalClose">鍏抽棴</button></div>
+    </div>
+  </div>
+
+  <script>
+    const KEY = 'ADMIN_PANEL_SECRET';
+    const adminSecretInput = document.getElementById('adminSecret');
+    adminSecretInput.value = sessionStorage.getItem(KEY) || '';
+    document.getElementById('saveSecret').onclick = () => { sessionStorage.setItem(KEY, adminSecretInput.value.trim()); document.getElementById('status').textContent = '宸蹭繚瀛樼鐞嗗憳瀵嗛挜鍒?sessionStorage'; };
+
+    async function loadUsers(){
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      if(!secret){ document.getElementById('status').textContent = '缂哄皯绠＄悊鍛樺瘑閽?; return; }
+      document.getElementById('status').textContent = '鍔犺浇涓?..';
+      try{
+        const r = await fetch('/api/admin/users', { headers: { 'x-admin-secret': secret } });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json();
+        if(!j.ok) throw new Error(j.error || 'unknown');
+        renderUsers(j.users || []);
+        document.getElementById('status').textContent = `宸插姞杞?${j.count || (j.users||[]).length} 浣嶇敤鎴穈;
+      }catch(e){ document.getElementById('status').textContent = '鍔犺浇澶辫触: ' + e.message; }
+    }
+
+    function fmt(d){ try{ return d ? new Date(d).toLocaleString() : '-'; }catch(e){ return d; } }
+    function renderUsers(list){
+      const tbody = document.getElementById('usersBody'); tbody.innerHTML = '';
+      const q = (document.getElementById('q').value || '').toLowerCase().trim();
+      const filtered = list.filter(u=>{
+        if(!q) return true;
+        return (u.id||'').toString().toLowerCase().includes(q) || (u.displayName||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q);
+      });
+      if(filtered.length===0){ tbody.innerHTML = '<tr><td colspan="6" class="small">鏃犵敤鎴?/td></tr>'; return; }
+      filtered.forEach(u=>{
+        const tr = document.createElement('tr');
+        const devs = u.devices ? Object.keys(u.devices).map(k=>`${k} (${u.devices[k] && u.devices[k].lastSeen? new Date(u.devices[k].lastSeen).toLocaleString() : ''})`).join('\n') : '';
+  tr.innerHTML = `<td>${u.id||''}</td><td>${u.displayName||''}</td><td>${u.email||''}</td><td>${fmt(u.createdAt)}</td><td>${fmt(u.lastLoginAt)}</td><td><pre style="white-space:pre-wrap;margin:0">${devs}</pre></td><td><button class="viewBtn" data-id="${u.id}">鏌ョ湅</button> <button class="disableBtn" data-id="${u.id}">${u.disabled? '鍚敤':'绂佺敤'}</button> <button class="resetBtn" data-id="${u.id}">鐢熸垚涓存椂瀵嗙爜锛堜粎鏄剧ず涓€娆★級</button></td>`;
+        tbody.appendChild(tr);
+      });
+      // attach handlers
+      document.querySelectorAll('.viewBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); fetchUserDetail(id); });
+      document.querySelectorAll('.disableBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); toggleDisable(id, ev.currentTarget); });
+      document.querySelectorAll('.resetBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); resetPassword(id); });
+    }
+
+    document.getElementById('loadUsers').onclick = loadUsers;
+    document.getElementById('q').oninput = () => { /* if table loaded, filter */ const tbody = document.getElementById('usersBody'); if(tbody && tbody.childElementCount) loadUsers(); };
+
+    // If adminSecret present open automatically to saved value
+    if(sessionStorage.getItem(KEY)) adminSecretInput.value = sessionStorage.getItem(KEY);
+
+    // Fetch single user detail
+    async function fetchUserDetail(id){
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      if(!secret){ document.getElementById('status').textContent = '缂哄皯绠＄悊鍛樺瘑閽?; return; }
+      document.getElementById('status').textContent = '鍔犺浇鐢ㄦ埛璇︽儏...';
+      try{
+        const r = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json();
+        if(!j.ok) throw new Error(j.error || 'unknown');
+        // show in modal
+        document.getElementById('modalTitle').textContent = '鐢ㄦ埛璇︽儏 鈥?' + (j.user && (j.user.username || j.user._id || j.user.id) || id);
+        document.getElementById('modalBody').textContent = JSON.stringify(j.user || j, null, 2);
+        document.getElementById('modal').style.display = 'flex';
+        document.getElementById('status').textContent = '';
+      }catch(e){ document.getElementById('status').textContent = '鍔犺浇璇︽儏澶辫触: ' + e.message; }
+    }
+
+    document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
+    
+    // Toggle disable/enable
+    async function toggleDisable(id, btn){
+      const ok = confirm('纭畾瑕佸垏鎹㈢敤鎴?' + id + ' 鐨勫惎鐢?绂佺敤 鐘舵€佸悧锛?);
+      if(!ok) return;
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      try{
+        // read current user to know current disabled state
+        const r0 = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
+        if(!r0.ok) throw new Error(r0.status + ' ' + r0.statusText);
+        const j0 = await r0.json(); if(!j0.ok) throw new Error(j0.error || 'unknown');
+        const cur = !!(j0.user && j0.user.disabled);
+        const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, disabled: !cur }) });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json();
+        if(!j.ok) throw new Error(j.error || 'unknown');
+        alert('鎿嶄綔鎴愬姛');
+        loadUsers();
+      }catch(e){ document.getElementById('status').textContent = '鎿嶄綔澶辫触: ' + e.message; }
+    }
+
+    // Reset password
+    async function resetPassword(id){
+  const ok = confirm('纭畾瑕佷负鐢ㄦ埛 ' + id + ' 鐢熸垚涓存椂瀵嗙爜鍚楋紵璇ュ瘑鐮佸彧浼氭樉绀轰竴娆★紝璇峰強鏃跺鍒跺苟杞氦缁欑敤鎴枫€?);
+  if(!ok) return;
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      try{
+        const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, resetPassword: true }) });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json();
+        if(!j.ok) throw new Error(j.error || 'unknown');
+  const temp = j.update && j.update.tempPassword ? j.update.tempPassword : null;
+  if(temp) alert('宸茬敓鎴愪复鏃跺瘑鐮侊紙浠呮樉绀轰竴娆★級锛歕n' + temp + '\n\n璇风珛鍗冲鍒跺苟杞氦缁欑敤鎴凤紱椤甸潰涓嶄細鍐嶆鏄剧ず璇ユ槑鏂囧瘑鐮併€?);
+  else alert('宸叉爣璁颁负闇€瑕侀噸缃瘑鐮侊紙鏈繑鍥炰复鏃跺瘑鐮侊級');
+        loadUsers();
+      }catch(e){ document.getElementById('status').textContent = '鎿嶄綔澶辫触: ' + e.message; }
+    }
+  </script>
+</body>
+</html>

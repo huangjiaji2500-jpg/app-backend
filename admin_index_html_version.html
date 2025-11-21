@@ -1,0 +1,293 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>骞冲彴閰嶇疆锛堢鐞嗗憳锛?/title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Arial;margin:20px}
+    textarea{width:100%;height:120px;font-family:monospace}
+    .row{margin-bottom:12px}
+    label{font-weight:600}
+    .small{font-size:12px;color:#666}
+    button{margin-right:8px}
+  </style>
+</head>
+<body>
+  <h1>骞冲彴閰嶇疆锛堢鐞嗗憳锛?/h1>
+  <p class="small">娉ㄦ剰锛氳鍦ㄤ細璇濆瓨鍌紙Session Storage锛変腑璁剧疆绠＄悊鍛樺瘑閽ワ紙閿細<code>ADMIN_PANEL_SECRET</code>锛夈€?/p>
+
+  <div class="row">
+  <label>绠＄悊鍛樺瘑閽?/label><br/>
+  <input id="adminSecret" style="width:100%" placeholder="绮樿创绠＄悊鍛樺瘑閽ュ悗鐐瑰嚮 淇濆瓨鍒?sessionStorage" />
+    <div style="margin-top:6px">
+      <button id="saveSecret">淇濆瓨鍒?sessionStorage</button>
+      <button id="openUsers" style="margin-left:8px">鐢ㄦ埛绠＄悊</button>
+      <button id="clearSecret">娓呴櫎</button>
+    </div>
+  </div>
+
+  <hr />
+  <h2>瀹℃牳鍏呭€煎嚟璇?/h2>
+  <p class="small">浠庢湇鍔″櫒鍔犺浇鏈€杩戠殑鍏呭€煎嚟璇侊紝瀹℃牳閫氳繃鍚庝細涓虹敤鎴峰鍔?USDT 浣欓銆?/p>
+  <div class="row">
+  <button id="loadPayments">鍔犺浇鍏呭€煎嚟璇?/button>
+  <label style="margin-left:12px">绛涢€? <select id="filterSelect"><option value="pending">浠呭緟瀹℃牳</option><option value="all">鍏ㄩ儴</option></select></label>
+    <span id="paymentsStatus" style="margin-left:12px"></span>
+    <button id="toggleRaw" style="margin-left:12px">鏄剧ず鍘熷鍝嶅簲</button>
+  </div>
+  <pre id="rawResponse" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;border:1px solid #eee;display:none;max-height:200px;overflow:auto;margin-top:8px"></pre>
+  <div id="paymentsList" style="margin-top:12px"></div>
+
+  <div class="row">
+    <label>鏄剧ず姹囩巼锛圝SON锛?/label>
+    <textarea id="displayRates" placeholder='渚嬪: {"USD":1.27, "CNY":9}'></textarea>
+  </div>
+
+  <div class="row">
+    <label>骞冲彴鍏呭€硷紙JSON锛?/label>
+    <textarea id="platformDeposit" placeholder='渚嬪: {"method":"qr","value":"..."}'></textarea>
+  </div>
+
+  <div class="row">
+    <button id="load">鍔犺浇褰撳墠閰嶇疆</button>
+    <button id="save">淇濆瓨鍒版湇鍔″櫒</button>
+    <span id="status" style="margin-left:12px"></span>
+  </div>
+  
+
+  <script>
+    const $ = sel => document.querySelector(sel);
+    const status = txt => { $('#status').textContent = txt; };
+
+    // load admin secret from sessionStorage
+    const KEY = 'ADMIN_PANEL_SECRET';
+    const adminSecretInput = $('#adminSecret');
+    adminSecretInput.value = sessionStorage.getItem(KEY) || '';
+
+    $('#saveSecret').onclick = () => {
+      sessionStorage.setItem(KEY, adminSecretInput.value.trim());
+      status('绠＄悊鍛樺瘑閽ュ凡淇濆瓨鍒?sessionStorage');
+    };
+    $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; status('宸叉竻闄?); };
+
+    $('#load').onclick = async () => {
+      status('鍔犺浇涓?..');
+      try {
+        const r = await fetch('/api/public/platform-config');
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json();
+        if(j.displayRates) $('#displayRates').value = JSON.stringify(j.displayRates, null, 2);
+        if(j.platformDeposit) $('#platformDeposit').value = JSON.stringify(j.platformDeposit, null, 2);
+        status('宸插姞杞芥渶鏂伴厤缃紙鏉ヨ嚜: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
+      } catch(e){
+        status('鍔犺浇澶辫触: ' + e.message);
+      }
+    };
+
+    $('#save').onclick = async () => {
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      if(!secret){ status('缂哄皯绠＄悊鍛樺瘑閽ャ€傝鍏堢矘璐村苟淇濆瓨鍒?sessionStorage銆?); return; }
+
+      let displayRates, platformDeposit;
+      try{
+        displayRates = JSON.parse($('#displayRates').value || '{}');
+      }catch(e){ status('displayRates JSON 瑙ｆ瀽澶辫触: ' + e.message); return; }
+      try{
+        platformDeposit = JSON.parse($('#platformDeposit').value || '{}');
+      }catch(e){ status('platformDeposit JSON 瑙ｆ瀽澶辫触: ' + e.message); return; }
+
+      status('淇濆瓨涓?..');
+      try{
+        const r = await fetch('/api/admin/set-platform-config', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-admin-secret': secret
+          },
+          body: JSON.stringify({ displayRates, platformDeposit })
+        });
+        const j = await r.json().catch(()=>({ok:false}));
+        if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
+        status('淇濆瓨鎴愬姛');
+      }catch(e){
+        status('淇濆瓨澶辫触: ' + e.message);
+      }
+    };
+
+    // Payments review with default pending filter + client-side pagination
+    const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
+    const rawResponseEl = $('#rawResponse');
+    $('#toggleRaw').onclick = () => {
+      if(!rawResponseEl) return;
+      rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none';
+    };
+    const paymentsList = $('#paymentsList');
+    const filterSelect = $('#filterSelect');
+
+  let paymentsData = []; // raw from server
+  let currentFilter = 'all';
+    let pageSize = 8;
+    let currentPage = 1;
+
+  filterSelect.value = 'all';
+    filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+
+    async function loadPayments() {
+      paymentsStatus('鍔犺浇涓?..');
+      paymentsList.innerHTML = '';
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      if(!secret){ paymentsStatus('缂哄皯绠＄悊鍛樺瘑閽?); return; }
+      try{
+        const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json();
+  paymentsData = j.payments || [];
+  paymentsStatus('宸插姞杞?' + (paymentsData.length || 0) + ' 鏉★紙瀹㈡埛绔級');
+        try{ rawResponseEl.style.display = 'block'; rawResponseEl.textContent = JSON.stringify(j, null, 2); }catch(e){ /* ignore */ }
+        currentPage = 1;
+        renderPage();
+      }catch(e){ paymentsStatus('鍔犺浇澶辫触: ' + e.message); }
+    }
+
+    function fmtDate(d){ try{ return new Date(d).toLocaleString(); }catch(e){ return d; } }
+  // 鐘舵€佹槧灏勶紝鐢ㄤ簬鍦?UI 涓樉绀轰腑鏂囩姸鎬?  const statusMap = { pending: '寰呭鏍?, approved: '宸查€氳繃', rejected: '宸叉嫆缁? };
+  function statusText(s){ return statusMap[s] || s || ''; }
+
+    function renderPage(){
+      if(!paymentsData || !paymentsData.length){ paymentsList.innerHTML = '<div class="small">娌℃湁鍏呭€煎嚟璇併€?/div>'; return; }
+      // apply filter
+      const filtered = paymentsData.filter(it => {
+        if(currentFilter === 'pending') return (it.status || 'pending') === 'pending';
+        return true;
+      });
+      const total = filtered.length;
+      const pageCount = Math.max(1, Math.ceil(total / pageSize));
+      if(currentPage > pageCount) currentPage = pageCount;
+      const start = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(start, start + pageSize);
+
+      paymentsList.innerHTML = '';
+      if(!pageItems.length){ paymentsList.innerHTML = '<div class="small">姝ら〉鏃犳暟鎹€?/div>'; }
+      pageItems.forEach(it => {
+        const wrap = document.createElement('div');
+        wrap.style.border = '1px solid #ddd';
+        wrap.style.padding = '10px';
+        wrap.style.marginBottom = '8px';
+  const title = document.createElement('div');
+  title.innerHTML = `<strong>鐢ㄦ埛:</strong> ${it.uid || '鏈煡'} &nbsp; <strong>閲戦(USDT):</strong> ${it.amount || 0} &nbsp; <strong>鐘舵€?</strong> ${statusText(it.status || 'pending')}`;
+        const meta = document.createElement('div');
+        meta.className = 'small';
+        meta.style.marginTop = '6px';
+  meta.textContent = `id: ${it.id}  鍒涘缓鏃堕棿: ${fmtDate(it.createdAt || it.createdAtISO || it.createdAt)} `;
+        wrap.appendChild(title);
+        wrap.appendChild(meta);
+        if(it.receiptViewUrl || it.receiptUrl){
+          const img = document.createElement('img');
+          img.src = it.receiptViewUrl || it.receiptUrl;
+          img.alt = '鏀舵嵁鍥剧墖';
+          img.style.maxWidth = '320px';
+          img.style.display = 'block';
+          img.style.marginTop = '8px';
+          // Fallback: if external placeholder cannot be resolved (DNS issues),
+          // replace with an inline SVG data URL placeholder so the UI stays informative.
+          const svgPlaceholder = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180">'
+            + '<rect width="100%" height="100%" fill="#f3f3f3"/>'
+            + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" '
+            + 'font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#666">'
+            + '鏆傛棤鍥剧墖鎴栨棤娉曞姞杞?/text></svg>'
+          );
+          img.onerror = function(){
+            this.onerror = null;
+            try{ this.src = svgPlaceholder; }catch(e){ /* ignore */ }
+          };
+          wrap.appendChild(img);
+        }
+        // If the payment is still pending show editable adminNote + action buttons
+        if ((it.status || 'pending') === 'pending') {
+          const noteRow = document.createElement('div');
+          noteRow.style.marginTop = '8px';
+          const noteLabel = document.createElement('div');
+          noteLabel.className = 'small';
+          noteLabel.textContent = '瀹℃牳澶囨敞锛堝彲閫夛級锛?;
+          const noteInput = document.createElement('textarea');
+          noteInput.style.width = '100%';
+          noteInput.style.height = '60px';
+          noteInput.placeholder = '濉啓瀹℃牳澶囨敞锛堜緥濡傦細鍏呭€煎嚟璇佹竻鏅?閲戦涓嶇绛夛級锛屽彲鐣欑┖銆?;
+          noteRow.appendChild(noteLabel);
+          noteRow.appendChild(noteInput);
+          wrap.appendChild(noteRow);
+
+          const btnRow = document.createElement('div');
+          btnRow.style.marginTop = '8px';
+          const approve = document.createElement('button');
+          approve.textContent = '閫氳繃';
+          approve.onclick = () => handleAction(it.id, 'approved', noteInput.value);
+          const reject = document.createElement('button');
+          reject.textContent = '鎷掔粷';
+          reject.onclick = () => handleAction(it.id, 'rejected', noteInput.value);
+          btnRow.appendChild(approve);
+          btnRow.appendChild(reject);
+          wrap.appendChild(btnRow);
+
+        } else {
+          // already reviewed - show readonly info
+          const info = document.createElement('div');
+          info.className = 'small';
+          info.style.marginTop = '8px';
+          const noteText = it.adminNote ? (' 澶囨敞锛? + it.adminNote) : '';
+          info.textContent = '宸插鏍革細' + statusText(it.status) + noteText;
+          wrap.appendChild(info);
+        }
+        paymentsList.appendChild(wrap);
+      });
+
+      // pagination controls
+      const pager = document.createElement('div');
+      pager.style.marginTop = '8px';
+      const prev = document.createElement('button');
+      prev.textContent = '涓婁竴椤?;
+      prev.disabled = currentPage <= 1;
+      prev.onclick = () => { if(currentPage>1){ currentPage--; renderPage(); } };
+      const next = document.createElement('button');
+      next.textContent = '涓嬩竴椤?;
+      next.style.marginLeft = '8px';
+      next.disabled = currentPage >= pageCount;
+      next.onclick = () => { if(currentPage<pageCount){ currentPage++; renderPage(); } };
+      const info = document.createElement('span');
+      info.className = 'small';
+      info.style.marginLeft = '12px';
+      info.textContent = `绗?${currentPage} / ${pageCount} 椤?锛堝叡 ${total} 鏉★級`;
+      pager.appendChild(prev);
+      pager.appendChild(next);
+      pager.appendChild(info);
+      paymentsList.appendChild(pager);
+    }
+
+    async function handleAction(id, action, adminNote){
+      const actionMap = { approved: '閫氳繃', rejected: '鎷掔粷' };
+  const ok = confirm('纭畾瑕佸皢鍑瘉 ' + id + ' 鏍囦负: ' + (actionMap[action] || action) + ' 锛?);
+      if(!ok) return;
+      paymentsStatus('鎻愪氦涓?..');
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      try{
+        const r = await fetch('/api/admin/payments', {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json', 'x-admin-secret': secret },
+          body: JSON.stringify({ id, action, adminNote: adminNote || null })
+        });
+        const j = await r.json().catch(()=>({ok:false}));
+        if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
+        paymentsStatus('鎿嶄綔鎴愬姛锛屽埛鏂板垪琛?..');
+        await loadPayments();
+      }catch(e){ paymentsStatus('鎿嶄綔澶辫触: ' + e.message); }
+    }
+
+    $('#loadPayments').onclick = loadPayments;
+    // 鎵撳紑鐢ㄦ埛绠＄悊椤甸潰
+    const openBtn = document.getElementById('openUsers');
+    if(openBtn) openBtn.onclick = () => { window.open('/admin/users.html', '_blank'); };
+  </script>
+</body>
+</html>
