@@ -1,0 +1,16 @@
+# Ignore patterns for Vercel deployments
+node_modules/
+dist/
+build/
+*.apk
+*.aab
+*.zip
+*.tar
+/.git/
+/.expo/
+.env
+serviceAccountKey.json
+
+# Optional: ignore local scripts or temporary files
+*.log
+*.tmp
