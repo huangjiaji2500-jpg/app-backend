@@ -41,7 +41,7 @@ function Do-Register {
     $payload = @{ username = $user; password = $password; displayName = '自动化测试用户'; email = "$($user)@example.com" }
     $json = $payload | ConvertTo-Json
     try {
-      $resp = Invoke-RestMethod -Uri "$Domain/api/register" -Method Post -Body $json -ContentType 'application/json' -TimeoutSec 30
+      $resp = Invoke-RestMethod -Uri "$Domain/api/register" -Method Post -Body $json -Headers @{ 'Content-Type' = 'application/json' } -TimeoutSec 30
     } catch {
       Write-Fail "Register request failed: $($_.Exception.Message)"
       return $false
@@ -67,7 +67,7 @@ function Do-Login {
   $payload = @{ username = $user.Trim(); password = $password }
   $json = $payload | ConvertTo-Json
   try {
-    $resp = Invoke-RestMethod -Uri "$Domain/api/login" -Method Post -Body $json -ContentType 'application/json' -TimeoutSec 30
+    $resp = Invoke-RestMethod -Uri "$Domain/api/login" -Method Post -Body $json -Headers @{ 'Content-Type' = 'application/json' } -TimeoutSec 30
   } catch {
     Write-Fail "Login request failed: $($_.Exception.Message)"
     return $false
