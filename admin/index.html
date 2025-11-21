@@ -43,8 +43,24 @@
   <div id="paymentsList" style="margin-top:12px"></div>
 
   <div class="row">
-    <label>显示汇率（JSON）</label>
-    <textarea id="displayRates" placeholder='例如: {"USD":1.27, "CNY":9}'></textarea>
+    <label>显示汇率</label>
+    <div id="ratesForm" style="border:1px solid #eee;padding:8px;border-radius:6px;max-width:560px">
+      <table style="width:100%">
+        <thead><tr><th>法币类型</th><th>USDT 汇率</th></tr></thead>
+        <tbody>
+          <tr><td>USD</td><td><input data-currency="USD" class="rateInput" style="width:100%" /></td></tr>
+          <tr><td>CNY</td><td><input data-currency="CNY" class="rateInput" style="width:100%" /></td></tr>
+          <tr><td>KRW</td><td><input data-currency="KRW" class="rateInput" style="width:100%" /></td></tr>
+          <tr><td>JPY</td><td><input data-currency="JPY" class="rateInput" style="width:100%" /></td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:8px">
+        <button id="saveRates">保存汇率</button>
+        <button id="previewRates" style="margin-left:8px">预览生效状态</button>
+        <span id="ratesStatus" style="margin-left:12px"></span>
+      </div>
+      <div id="ratesPreview" style="margin-top:8px;display:none;padding:8px;background:#fafafa;border:1px dashed #eee"></div>
+    </div>
   </div>
 
   <!-- 用户管理区 -->
@@ -79,14 +95,41 @@
   </section>
 
   <div class="row">
-    <label>平台充值（JSON）</label>
-    <textarea id="platformDeposit" placeholder='例如: {"method":"qr","value":"..."}'></textarea>
+    <h2>平台收款二维码管理</h2>
+    <div style="max-width:640px;border:1px solid #eee;padding:12px;border-radius:6px">
+      <div style="margin-bottom:8px"><label>收款地址</label><br/><input id="pdAddress" style="width:100%" placeholder="收款地址（例如：USDT 地址）" /></div>
+      <div style="margin-bottom:8px"><label>备注说明</label><br/><input id="pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
+      <div style="margin-bottom:8px">
+        <label>上传二维码图片（PNG/JPG）</label><br/>
+        <input type="file" id="pdFile" accept="image/png,image/jpeg" />
+        <div id="pdPreviewWrap" style="margin-top:8px;display:none">
+          <div class="small">图片预览：</div>
+          <img id="pdPreview" src="" style="max-width:320px;border:1px solid #ddd;padding:6px;background:#fff" />
+        </div>
+      </div>
+      <div style="margin-top:6px">
+        <label><input type="checkbox" id="pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
+      </div>
+      <div style="margin-top:12px">
+        <button id="load">加载当前配置</button>
+        <button id="save" style="margin-left:8px">保存到服务器</button>
+        <span id="status" style="margin-left:12px"></span>
+      </div>
+    </div>
   </div>
 
-  <div class="row">
-    <button id="load">加载当前配置</button>
-    <button id="save">保存到服务器</button>
-    <span id="status" style="margin-left:12px"></span>
+  <!-- 新手引导模态 -->
+  <div id="onboardModal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;padding:18px;max-width:720px;margin:auto;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
+      <h2>欢迎使用管理员后台 — 新手引导</h2>
+      <ol>
+        <li>第一步：设置并保存管理员密钥（顶部）。</li>
+        <li>第二步：在 <strong>汇率管理</strong> 中输入四个法币的汇率并点击“保存汇率”。</li>
+        <li>第三步：在 <strong>平台收款二维码管理</strong> 上传二维码图片、填写地址与备注，勾选“一键同步到所有用户端”后保存。</li>
+        <li>第四步：在 <strong>审核充值凭证</strong> 区域加载凭证并审核一笔（点击“通过”）。</li>
+      </ol>
+      <div style="text-align:right;margin-top:12px"><button id="onboardClose">我已了解，开始使用</button></div>
+    </div>
   </div>
   
 
@@ -105,31 +148,52 @@
     };
     $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; status('已清除'); };
 
+    // Load current platform config and populate the visual form
     $('#load').onclick = async () => {
       status('加载中...');
       try {
         const r = await fetch('/api/public/platform-config');
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
-        if(j.displayRates) $('#displayRates').value = JSON.stringify(j.displayRates, null, 2);
-        if(j.platformDeposit) $('#platformDeposit').value = JSON.stringify(j.platformDeposit, null, 2);
+        // populate rate inputs
+        try{
+          const rates = j.displayRates || {};
+          document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); inp.value = rates[k] || ''; });
+        }catch(e){ /* ignore */ }
+        // populate platform deposit
+        try{
+          const pd = j.platformDeposit || {};
+          $('#pdAddress').value = pd.address || pd.value || '';
+          $('#pdNote').value = pd.note || pd.desc || '';
+          if(pd.qrImage){ $('#pdPreview').src = pd.qrImage; $('#pdPreviewWrap').style.display = 'block'; }
+          else { $('#pdPreview').src = ''; $('#pdPreviewWrap').style.display = 'none'; }
+        }catch(e){ }
         status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
       } catch(e){
         status('加载失败: ' + e.message);
       }
     };
 
+    // Save whole config: rates + platformDeposit (includes optional syncAll flag)
     $('#save').onclick = async () => {
       const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
       if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
-      let displayRates, platformDeposit;
-      try{
-        displayRates = JSON.parse($('#displayRates').value || '{}');
-      }catch(e){ status('displayRates JSON 解析失败: ' + e.message); return; }
-      try{
-        platformDeposit = JSON.parse($('#platformDeposit').value || '{}');
-      }catch(e){ status('platformDeposit JSON 解析失败: ' + e.message); return; }
+      // collect displayRates from inputs
+      const displayRates = {};
+      document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) displayRates[k] = v; });
+
+      // collect platformDeposit
+      const platformDeposit = {};
+      const addr = $('#pdAddress').value && $('#pdAddress').value.trim();
+      const note = $('#pdNote').value && $('#pdNote').value.trim();
+      if(addr) platformDeposit.address = addr;
+      if(note) platformDeposit.note = note;
+      // if preview image is a data URL, include it
+      const imgSrc = $('#pdPreview').src || '';
+      if(imgSrc && imgSrc.startsWith('data:')) platformDeposit.qrImage = imgSrc;
+
+      const syncAll = !!$('#pdSyncAll').checked;
 
       status('保存中...');
       try{
@@ -139,7 +203,7 @@
             'content-type': 'application/json',
             'x-admin-secret': secret
           },
-          body: JSON.stringify({ displayRates, platformDeposit })
+          body: JSON.stringify({ displayRates: Object.keys(displayRates).length ? displayRates : undefined, platformDeposit: Object.keys(platformDeposit).length ? platformDeposit : undefined, syncAll })
         });
         const j = await r.json().catch(()=>({ok:false}));
         if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
@@ -148,6 +212,52 @@
         status('保存失败: ' + e.message);
       }
     };
+
+    // Save rates button (separate quick action)
+    document.getElementById('saveRates').onclick = async () => {
+      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      if(!secret){ document.getElementById('ratesStatus').textContent = '缺少管理员密钥'; return; }
+      const displayRates = {};
+      document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) displayRates[k] = v; });
+      document.getElementById('ratesStatus').textContent = '保存中...';
+      try{
+        const r = await fetch('/api/admin/set-platform-config', { method:'POST', headers: { 'content-type':'application/json', 'x-admin-secret': secret }, body: JSON.stringify({ displayRates }) });
+        const j = await r.json().catch(()=>({ok:false})); if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
+        document.getElementById('ratesStatus').textContent = '保存成功';
+      }catch(e){ document.getElementById('ratesStatus').textContent = '保存失败: ' + e.message; }
+    };
+
+    // Preview rates
+    document.getElementById('previewRates').onclick = () => {
+      const preview = {};
+      document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) preview[k] = v; });
+      const el = document.getElementById('ratesPreview'); el.style.display = 'block'; el.textContent = '当前预览: ' + JSON.stringify(preview, null, 2);
+    };
+
+    // File upload -> convert to data URL and preview
+    document.getElementById('pdFile').addEventListener('change', function(ev){
+      const f = ev.target.files && ev.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = function(e){ try{ const data = e.target.result; $('#pdPreview').src = data; $('#pdPreviewWrap').style.display = 'block'; }catch(err){} };
+      reader.readAsDataURL(f);
+    });
+
+    // Onboarding modal
+    const onboardKey = 'ADMIN_ONBOARDED_V1';
+    document.getElementById('onboardClose').onclick = () => { sessionStorage.setItem(onboardKey, '1'); document.getElementById('onboardModal').style.display = 'none'; };
+    // show onboarding if first run
+    (function(){ try{ if(!sessionStorage.getItem(onboardKey)) { document.getElementById('onboardModal').style.display = 'flex'; } }catch(e){} })();
+
+    // Auto-load payments & users when admin secret present on page load
+    window.addEventListener('load', () => {
+      try{
+        const s = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        if(s){ // auto load
+          setTimeout(()=>{ if(document.getElementById('loadPayments')) loadPayments(); if(document.getElementById('loadUsers')) loadUsers(); if(document.getElementById('load')) document.getElementById('load').click(); }, 400);
+        }
+      }catch(e){}
+    });
 
     // Payments review with default pending filter + client-side pagination
     const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };

@@ -45,6 +45,22 @@ module.exports = async (req, res) => {
     if (platformDeposit) payload.platformDeposit = platformDeposit;
 
     await docRef.set(payload, { merge: true });
+    // If requested, also write a sync_items entry so clients using /api/sync/list
+    // can pick up the new platform-deposit without needing a client repackage.
+    try {
+      if (platformDeposit && body && body.syncAll) {
+        const nowTs = Date.now();
+        await db.collection('sync_items').add({
+          type: 'platform-deposit',
+          data: platformDeposit,
+          payload: { platformDeposit },
+          ts: nowTs,
+          receivedAt: nowTs
+        });
+      }
+    } catch (e) {
+      console.error('set-platform-config: broadcast to sync_items failed', e && e.stack ? e.stack : e);
+    }
     return res.status(200).json({ ok: true });
   } catch (err) {
     console.error('set-platform-config error', err && err.stack ? err.stack : err);
