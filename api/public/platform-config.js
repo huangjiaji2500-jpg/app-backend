@@ -12,7 +12,7 @@ module.exports = async function(req, res){
     const items = snaps.docs.map(d=>d.data());
     const rates = items.filter(i=>i.type === 'rate').map(i=>i.data||{});
     const paymentMethods = items.filter(i=>i.type === 'payment-method').map(i=>i.data||{});
-    const platformDeposit = items.filter(i=>i.type === 'platform-deposit').map(i=>i.data||{}).slice(0,1)[0] || null;
+    let platformDeposit = items.filter(i=>i.type === 'platform-deposit').map(i=>i.data||{}).slice(0,1)[0] || null;
     // build displayRates simple map (client expects USD,CNY,KRW,JPY possibly)
     const displayRates = {};
     for (const r of rates){
@@ -28,6 +28,18 @@ module.exports = async function(req, res){
       } catch(e){ }
     }
     const debug = { source:'firestore', envHasFirestore: true };
+    // If we didn't find a platform-deposit in sync_items, fallback to legacy platform doc
+    if (!platformDeposit) {
+      try {
+        const doc = await db.doc('platform/platform').get();
+        if (doc.exists) {
+          const d = doc.data() || {};
+          if (d.platformDeposit) { platformDeposit = d.platformDeposit; debug.source = 'platform_doc'; }
+        }
+      } catch (e) {
+        // ignore fallback errors
+      }
+    }
     return jsonResponse(res, 200, { ok:true, displayRates, platformDeposit, paymentMethods, debug });
   } catch (e) {
     console.error('[public/platform-config] error', e && (e.stack || e.message));
