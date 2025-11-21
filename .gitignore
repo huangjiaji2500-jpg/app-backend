@@ -1,4 +1,11 @@
-﻿# 忽略密钥文件
+﻿node_modules/
+dist/
+build/
+*.log
+*.tmp
+# Do not commit service account credentials
+serviceAccountKey.json
+# 忽略密钥文件
 serviceAccountKey.json
 # 忽略环境变量文件
 .env
