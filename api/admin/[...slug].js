@@ -50,11 +50,26 @@ module.exports = async function(req, res){
   try{
     if(sub === '/payments' || sub === '/payments/'){
       if(req.method === 'GET'){
-        const q = db.collection('sync_items').where('type','==','deposit').orderBy('receivedAt','desc').limit(500);
-        const snap = await q.get();
-        const items = [];
-        snap.forEach(d => items.push(Object.assign({ _id: d.id }, d.data())));
-        return jsonResponse(res, 200, { ok:true, payments: items });
+        try {
+          const q = db.collection('sync_items').where('type','==','deposit').orderBy('receivedAt','desc').limit(500);
+          const snap = await q.get();
+          const items = [];
+          snap.forEach(d => items.push(Object.assign({ _id: d.id }, d.data())));
+          return jsonResponse(res, 200, { ok:true, payments: items });
+        } catch(e) {
+          // fallback: if orderBy causes issues (missing field/index), try simpler query
+          console.error('[admin/payments] primary query failed', e && (e.stack || e.message));
+          try {
+            const q2 = db.collection('sync_items').where('type','==','deposit').limit(500);
+            const snap2 = await q2.get();
+            const items2 = [];
+            snap2.forEach(d => items2.push(Object.assign({ _id: d.id }, d.data())));
+            return jsonResponse(res, 200, { ok:true, payments: items2, debugFallback: true });
+          } catch(err2) {
+            console.error('[admin/payments] fallback query failed', err2 && (err2.stack || err2.message));
+            return jsonResponse(res, 500, { ok:false, error:'query_failed', message: (err2 && (err2.message || String(err2))) });
+          }
+        }
       }
       if(req.method === 'PATCH'){
         let body = req.body || {};
