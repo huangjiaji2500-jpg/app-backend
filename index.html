@@ -3,111 +3,538 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>平台配置（管理员）</title>
-  <style>
-    body{font-family:system-ui,Segoe UI,Arial;margin:20px}
-    textarea{width:100%;height:120px;font-family:monospace}
-    .row{margin-bottom:12px}
-    label{font-weight:600}
-    .small{font-size:12px;color:#666}
-    button{margin-right:8px}
-  </style>
-</head>
-<body>
-  <h1>平台配置（管理员）</h1>
-  <p class="small">注意：请在会话存储（Session Storage）中设置管理员密钥（键：<code>ADMIN_PANEL_SECRET</code>）。</p>
+  <!doctype html>
+  <html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>平台配置（管理员）</title>
+    <style>
+      body{font-family:system-ui,Segoe UI,Arial;margin:20px}
+      textarea{width:100%;height:120px;font-family:monospace}
+      .row{margin-bottom:12px}
+      label{font-weight:600}
+      .small{font-size:12px;color:#666}
+      button{margin-right:8px}
+      table{border-collapse:collapse;width:100%}
+      th,td{border:1px solid #ddd;padding:8px;text-align:left}
+      th{background:#f5f5f5}
+    </style>
+  </head>
+  <body>
+    <h1>平台配置（管理员）</h1>
+    <p class="small">注意：请在会话存储（Session Storage）中设置管理员密钥（键：<code>ADMIN_PANEL_SECRET</code>）。</p>
 
-  <div class="row">
-  <label>管理员密钥</label><br/>
-  <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
-    <div style="margin-top:6px">
-      <button id="saveSecret">保存到 sessionStorage</button>
-      <button id="clearSecret">清除</button>
-    </div>
-  </div>
-
-  <div class="row">
-    <label>显示汇率</label>
-    <div id="ratesForm" style="border:1px solid #eee;padding:8px;border-radius:6px;max-width:560px">
-      <table style="width:100%">
-        <thead><tr><th>法币类型</th><th>USDT 汇率</th></tr></thead>
-        <tbody>
-          <tr><td>USD</td><td><input data-currency="USD" class="rateInput" style="width:100%" /></td></tr>
-          <tr><td>CNY</td><td><input data-currency="CNY" class="rateInput" style="width:100%" /></td></tr>
-          <tr><td>KRW</td><td><input data-currency="KRW" class="rateInput" style="width:100%" /></td></tr>
-          <tr><td>JPY</td><td><input data-currency="JPY" class="rateInput" style="width:100%" /></td></tr>
-        </tbody>
-      </table>
-      <div style="margin-top:8px">
-        <button id="saveRates">保存汇率</button>
-        <button id="previewRates" style="margin-left:8px">预览生效状态</button>
-        <span id="ratesStatus" style="margin-left:12px"></span>
+    <div class="row">
+    <label>管理员密钥</label><br/>
+    <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
+      <div style="margin-top:6px">
+        <button id="saveSecret">保存到 sessionStorage</button>
+        <button id="openUsers" style="margin-left:8px">用户管理</button>
+        <button id="clearSecret">清除</button>
       </div>
-      <div id="ratesPreview" style="margin-top:8px;display:none;padding:8px;background:#fafafa;border:1px dashed #eee"></div>
     </div>
-  </div>
 
-  <div class="row">
-    <h2>平台收款二维码管理</h2>
-    <div style="max-width:640px;border:1px solid #eee;padding:12px;border-radius:6px">
-      <div style="margin-bottom:8px"><label>收款地址</label><br/><input id="pdAddress" style="width:100%" placeholder="收款地址（例如：USDT 地址）" /></div>
-      <div style="margin-bottom:8px"><label>备注说明</label><br/><input id="pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
-      <div style="margin-bottom:8px">
-        <label>上传二维码图片（PNG/JPG）</label><br/>
-        <input type="file" id="pdFile" accept="image/png,image/jpeg" />
-        <div id="pdPreviewWrap" style="margin-top:8px;display:none">
-          <div class="small">图片预览：</div>
-          <img id="pdPreview" src="" style="max-width:320px;border:1px solid #ddd;padding:6px;background:#fff" />
+    <hr />
+    <h2>审核充值凭证</h2>
+    <p class="small">从服务器加载最近的充值凭证，审核通过后会为用户增加 USDT 余额。</p>
+    <div class="row">
+    <button id="loadPayments">加载充值凭证</button>
+    <label style="margin-left:12px">筛选: <select id="filterSelect"><option value="pending">仅待审核</option><option value="all">全部</option></select></label>
+      <span id="paymentsStatus" style="margin-left:12px"></span>
+      <button id="toggleRaw" style="margin-left:12px">显示原始响应</button>
+    </div>
+    <pre id="rawResponse" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;border:1px solid #eee;display:none;max-height:200px;overflow:auto;margin-top:8px"></pre>
+    <div id="paymentsList" style="margin-top:12px"></div>
+
+    <div class="row">
+      <label>显示汇率</label>
+      <div id="ratesForm" style="border:1px solid #eee;padding:8px;border-radius:6px;max-width:560px">
+        <table style="width:100%">
+          <thead><tr><th>法币类型</th><th>USDT 汇率</th></tr></thead>
+          <tbody>
+            <tr><td>USD</td><td><input data-currency="USD" class="rateInput" style="width:100%" /></td></tr>
+            <tr><td>CNY</td><td><input data-currency="CNY" class="rateInput" style="width:100%" /></td></tr>
+            <tr><td>KRW</td><td><input data-currency="KRW" class="rateInput" style="width:100%" /></td></tr>
+            <tr><td>JPY</td><td><input data-currency="JPY" class="rateInput" style="width:100%" /></td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:8px">
+          <button id="saveRates">保存汇率</button>
+          <button id="previewRates" style="margin-left:8px">预览生效状态</button>
+          <span id="ratesStatus" style="margin-left:12px"></span>
+        </div>
+        <div id="ratesPreview" style="margin-top:8px;display:none;padding:8px;background:#fafafa;border:1px dashed #eee"></div>
+      </div>
+    </div>
+
+    <!-- 用户管理区 -->
+    <hr />
+    <section id="usersSection">
+      <h2>用户管理</h2>
+      <p class="small">请在页面顶部粘贴管理员密钥并保存到 sessionStorage（键：<code>ADMIN_PANEL_SECRET</code>），然后点击“加载用户”。</p>
+      <div style="margin-bottom:12px">
+        <button id="loadUsers">加载用户</button>
+        <input id="q" class="search" placeholder="搜索 userId 或 displayName 或 email" style="width:240px;padding:6px;margin-left:8px" />
+      </div>
+
+      <div id="usersStatus" class="small"></div>
+      <div style="margin-top:12px">
+        <table id="usersTable">
+          <thead>
+            <tr><th>用户ID</th><th>用户名 / 显示名</th><th>邮箱</th><th>注册时间</th><th>最近登录</th><th>设备</th><th>操作</th></tr>
+          </thead>
+          <tbody id="usersBody">
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 详情模态（隐藏） -->
+      <div id="modal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;padding:20px">
+        <div id="modalContent" style="background:#fff;padding:16px;max-width:720px;margin:auto;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.2);">
+          <h3 id="modalTitle">用户详情</h3>
+          <pre id="modalBody" style="white-space:pre-wrap;max-height:400px;overflow:auto;background:#f7f7f7;padding:8px;border:1px solid #eee"></pre>
+          <div style="text-align:right;margin-top:8px"><button id="modalClose">关闭</button></div>
         </div>
       </div>
-      <div style="margin-top:6px">
-        <label><input type="checkbox" id="pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
-      </div>
-      <div style="margin-top:12px">
-        <button id="load">加载当前配置</button>
-        <button id="save" style="margin-left:8px">保存到服务器</button>
-        <span id="status" style="margin-left:12px"></span>
+    </section>
+
+    <div class="row">
+      <h2>平台收款二维码管理</h2>
+      <div style="max-width:640px;border:1px solid #eee;padding:12px;border-radius:6px">
+        <div style="margin-bottom:8px"><label>收款地址</label><br/><input id="pdAddress" style="width:100%" placeholder="收款地址（例如：USDT 地址）" /></div>
+        <div style="margin-bottom:8px"><label>备注说明</label><br/><input id="pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
+        <div style="margin-bottom:8px">
+          <label>上传二维码图片（PNG/JPG）</label><br/>
+          <input type="file" id="pdFile" accept="image/png,image/jpeg" />
+          <div id="pdPreviewWrap" style="margin-top:8px;display:none">
+            <div class="small">图片预览：</div>
+            <img id="pdPreview" src="" style="max-width:320px;border:1px solid #ddd;padding:6px;background:#fff" />
+          </div>
+        </div>
+        <div style="margin-top:6px">
+          <label><input type="checkbox" id="pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
+        </div>
+        <div style="margin-top:12px">
+          <button id="load">加载当前配置</button>
+          <button id="save" style="margin-left:8px">保存到服务器</button>
+          <span id="status" style="margin-left:12px"></span>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- 新手引导模态 -->
-  <div id="onboardModal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:20px">
-    <div style="background:#fff;padding:18px;max-width:720px;margin:auto;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
-      <h2>欢迎使用管理员后台 — 新手引导</h2>
-      <ol>
-        <li>第一步：设置并保存管理员密钥（顶部）。</li>
-        <li>第二步：在 <strong>汇率管理</strong> 中输入四个法币的汇率并点击“保存汇率”。</li>
-        <li>第三步：在 <strong>平台收款二维码管理</strong> 上传二维码图片、填写地址与备注，勾选“一键同步到所有用户端”后保存。</li>
-        <li>第四步：在 <strong>审核充值凭证</strong> 区域加载凭证并审核一笔（点击“通过”）。</li>
-      </ol>
-      <div style="text-align:right;margin-top:12px"><button id="onboardClose">我已了解，开始使用</button></div>
+    <!-- 新手引导模态 -->
+    <div id="onboardModal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:20px">
+      <div style="background:#fff;padding:18px;max-width:720px;margin:auto;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
+        <h2>欢迎使用管理员后台 — 新手引导</h2>
+        <ol>
+          <li>第一步：设置并保存管理员密钥（顶部）。</li>
+          <li>第二步：在 <strong>汇率管理</strong> 中输入四个法币的汇率并点击“保存汇率”。</li>
+          <li>第三步：在 <strong>平台收款二维码管理</strong> 上传二维码图片、填写地址与备注，勾选“一键同步到所有用户端”后保存。</li>
+          <li>第四步：在 <strong>审核充值凭证</strong> 区域加载凭证并审核一笔（点击“通过”）。</li>
+        </ol>
+        <div style="text-align:right;margin-top:12px"><button id="onboardClose">我已了解，开始使用</button></div>
+      </div>
     </div>
-  </div>
 
-  <script>
-    const $ = sel => document.querySelector(sel);
-    const status = txt => { $('#status').textContent = txt; };
+    <script>
+      const $ = sel => document.querySelector(sel);
+      const status = txt => { $('#status').textContent = txt; };
 
-    // load admin secret from sessionStorage
-    const KEY = 'ADMIN_PANEL_SECRET';
-    const adminSecretInput = $('#adminSecret');
-    adminSecretInput.value = sessionStorage.getItem(KEY) || '';
+      // load admin secret from sessionStorage
+      const KEY = 'ADMIN_PANEL_SECRET';
+      const adminSecretInput = $('#adminSecret');
+      adminSecretInput.value = sessionStorage.getItem(KEY) || '';
 
-    $('#saveSecret').onclick = () => {
-      sessionStorage.setItem(KEY, adminSecretInput.value.trim());
-      status('管理员密钥已保存到 sessionStorage');
-    };
-    $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; status('已清除'); };
+      $('#saveSecret').onclick = () => {
+        sessionStorage.setItem(KEY, adminSecretInput.value.trim());
+        status('管理员密钥已保存到 sessionStorage');
+      };
+      $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; status('已清除'); };
 
-    $('#load').onclick = async () => {
-      status('加载中...');
-      try {
-        const r = await fetch('/api/public/platform-config');
-        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
-        const j = await r.json();
-        if(j.displayRates) $('#displayRates').value = JSON.stringify(j.displayRates, null, 2);
-        if(j.platformDeposit) $('#platformDeposit').value = JSON.stringify(j.platformDeposit, null, 2);
+      // Load current platform config and populate the visual form
+      $('#load').onclick = async () => {
+        status('加载中...');
+        try {
+          const r = await fetch('/api/public/platform-config');
+          if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+          const j = await r.json();
+          // populate rate inputs
+          try{
+            const rates = j.displayRates || {};
+            document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); inp.value = rates[k] || ''; });
+          }catch(e){ /* ignore */ }
+          // populate platform deposit
+          try{
+            const pd = j.platformDeposit || {};
+            $('#pdAddress').value = pd.address || pd.value || '';
+            $('#pdNote').value = pd.note || pd.desc || '';
+            if(pd.qrImage){ $('#pdPreview').src = pd.qrImage; $('#pdPreviewWrap').style.display = 'block'; }
+            else { $('#pdPreview').src = ''; $('#pdPreviewWrap').style.display = 'none'; }
+          }catch(e){ }
+          status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
+        } catch(e){
+          status('加载失败: ' + e.message);
+        }
+      };
+
+      // Save whole config: rates + platformDeposit (includes optional syncAll flag)
+      $('#save').onclick = async () => {
+        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
+
+        // collect displayRates from inputs
+        const displayRates = {};
+        document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) displayRates[k] = v; });
+
+        // collect platformDeposit
+        const platformDeposit = {};
+        const addr = $('#pdAddress').value && $('#pdAddress').value.trim();
+        const note = $('#pdNote').value && $('#pdNote').value.trim();
+        if(addr) platformDeposit.address = addr;
+        if(note) platformDeposit.note = note;
+        // if preview image is a data URL, include it
+        const imgSrc = $('#pdPreview').src || '';
+        if(imgSrc && imgSrc.startsWith('data:')) platformDeposit.qrImage = imgSrc;
+
+        const syncAll = !!$('#pdSyncAll').checked;
+
+        status('保存中...');
+        try{
+          const r = await fetch('/api/admin/set-platform-config', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'x-admin-secret': secret
+            },
+            body: JSON.stringify({ displayRates: Object.keys(displayRates).length ? displayRates : undefined, platformDeposit: Object.keys(platformDeposit).length ? platformDeposit : undefined, syncAll })
+          });
+          const j = await r.json().catch(()=>({ok:false}));
+          if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
+          status('保存成功');
+        }catch(e){
+          status('保存失败: ' + e.message);
+        }
+      };
+
+      // Save rates button (separate quick action)
+      document.getElementById('saveRates').onclick = async () => {
+        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        if(!secret){ document.getElementById('ratesStatus').textContent = '缺少管理员密钥'; return; }
+        const displayRates = {};
+        document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) displayRates[k] = v; });
+        document.getElementById('ratesStatus').textContent = '保存中...';
+        try{
+          const r = await fetch('/api/admin/set-platform-config', { method:'POST', headers: { 'content-type':'application/json', 'x-admin-secret': secret }, body: JSON.stringify({ displayRates }) });
+          const j = await r.json().catch(()=>({ok:false})); if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
+          document.getElementById('ratesStatus').textContent = '保存成功';
+        }catch(e){ document.getElementById('ratesStatus').textContent = '保存失败: ' + e.message; }
+      };
+
+      // Preview rates
+      document.getElementById('previewRates').onclick = () => {
+        const preview = {};
+        document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) preview[k] = v; });
+        const el = document.getElementById('ratesPreview'); el.style.display = 'block'; el.textContent = '当前预览: ' + JSON.stringify(preview, null, 2);
+      };
+
+      // File upload -> convert to data URL and preview
+      document.getElementById('pdFile').addEventListener('change', function(ev){
+        const f = ev.target.files && ev.target.files[0];
+        if(!f) return;
+        const reader = new FileReader();
+        reader.onload = function(e){ try{ const data = e.target.result; $('#pdPreview').src = data; $('#pdPreviewWrap').style.display = 'block'; }catch(err){} };
+        reader.readAsDataURL(f);
+      });
+
+      // Onboarding modal
+      const onboardKey = 'ADMIN_ONBOARDED_V1';
+      document.getElementById('onboardClose').onclick = () => { sessionStorage.setItem(onboardKey, '1'); document.getElementById('onboardModal').style.display = 'none'; };
+      // show onboarding if first run
+      (function(){ try{ if(!sessionStorage.getItem(onboardKey)) { document.getElementById('onboardModal').style.display = 'flex'; } }catch(e){} })();
+
+      // Auto-load payments & users when admin secret present on page load
+      window.addEventListener('load', () => {
+        try{
+          const s = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+          if(s){ // auto load
+            setTimeout(()=>{ if(document.getElementById('loadPayments')) loadPayments(); if(document.getElementById('loadUsers')) loadUsers(); if(document.getElementById('load')) document.getElementById('load').click(); }, 400);
+          }
+        }catch(e){}
+      });
+
+      // Payments review with default pending filter + client-side pagination
+      const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
+      const rawResponseEl = $('#rawResponse');
+      $('#toggleRaw').onclick = () => {
+        if(!rawResponseEl) return;
+        rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none';
+      };
+      const paymentsList = $('#paymentsList');
+      const filterSelect = $('#filterSelect');
+
+    let paymentsData = []; // raw from server
+    let currentFilter = 'all';
+      let pageSize = 8;
+      let currentPage = 1;
+
+    filterSelect.value = 'all';
+      filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+
+      async function loadPayments() {
+        paymentsStatus('加载中...');
+        paymentsList.innerHTML = '';
+        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
+        try{
+          const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
+          if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+          const j = await r.json();
+    paymentsData = j.payments || [];
+    paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
+          try{ rawResponseEl.style.display = 'block'; rawResponseEl.textContent = JSON.stringify(j, null, 2); }catch(e){ /* ignore */ }
+          currentPage = 1;
+          renderPage();
+        }catch(e){ paymentsStatus('加载失败: ' + e.message); }
+      }
+
+      function fmtDate(d){ try{ return new Date(d).toLocaleString(); }catch(e){ return d; } }
+    // 状态映射，用于在 UI 中显示中文状态
+    const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
+    function statusText(s){ return statusMap[s] || s || ''; }
+
+      function renderPage(){
+        if(!paymentsData || !paymentsData.length){ paymentsList.innerHTML = '<div class="small">没有充值凭证。</div>'; return; }
+        // apply filter
+        const filtered = paymentsData.filter(it => {
+          if(currentFilter === 'pending') return (it.status || 'pending') === 'pending';
+          return true;
+        });
+        const total = filtered.length;
+        const pageCount = Math.max(1, Math.ceil(total / pageSize));
+        if(currentPage > pageCount) currentPage = pageCount;
+        const start = (currentPage - 1) * pageSize;
+        const pageItems = filtered.slice(start, start + pageSize);
+
+        paymentsList.innerHTML = '';
+        if(!pageItems.length){ paymentsList.innerHTML = '<div class="small">此页无数据。</div>'; }
+        pageItems.forEach(it => {
+          const wrap = document.createElement('div');
+          wrap.style.border = '1px solid #ddd';
+          wrap.style.padding = '10px';
+          wrap.style.marginBottom = '8px';
+    const title = document.createElement('div');
+    title.innerHTML = `<strong>用户:</strong> ${it.uid || '未知'} &nbsp; <strong>金额(USDT):</strong> ${it.amount || 0} &nbsp; <strong>状态:</strong> ${statusText(it.status || 'pending')}`;
+          const meta = document.createElement('div');
+          meta.className = 'small';
+          meta.style.marginTop = '6px';
+    meta.textContent = `id: ${it.id}  创建时间: ${fmtDate(it.createdAt || it.createdAtISO || it.createdAt)} `;
+          wrap.appendChild(title);
+          wrap.appendChild(meta);
+          if(it.receiptViewUrl || it.receiptUrl){
+            const img = document.createElement('img');
+            img.src = it.receiptViewUrl || it.receiptUrl;
+            img.alt = '收据图片';
+            img.style.maxWidth = '320px';
+            img.style.display = 'block';
+            img.style.marginTop = '8px';
+            // Fallback: if external placeholder cannot be resolved (DNS issues),
+            // replace with an inline SVG data URL placeholder so the UI stays informative.
+            const svgPlaceholder = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+              '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180">'
+              + '<rect width="100%" height="100%" fill="#f3f3f3"/>'
+              + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" '
+              + 'font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#666">'
+              + '暂无图片或无法加载</text></svg>'
+            );
+            img.onerror = function(){
+              this.onerror = null;
+              try{ this.src = svgPlaceholder; }catch(e){ /* ignore */ }
+            };
+            wrap.appendChild(img);
+          }
+          // If the payment is still pending show editable adminNote + action buttons
+          if ((it.status || 'pending') === 'pending') {
+            const noteRow = document.createElement('div');
+            noteRow.style.marginTop = '8px';
+            const noteLabel = document.createElement('div');
+            noteLabel.className = 'small';
+            noteLabel.textContent = '审核备注（可选）：';
+            const noteInput = document.createElement('textarea');
+            noteInput.style.width = '100%';
+            noteInput.style.height = '60px';
+            noteInput.placeholder = '填写审核备注（例如：充值凭证清晰/金额不符等），可留空。';
+            noteRow.appendChild(noteLabel);
+            noteRow.appendChild(noteInput);
+            wrap.appendChild(noteRow);
+
+            const btnRow = document.createElement('div');
+            btnRow.style.marginTop = '8px';
+            const approve = document.createElement('button');
+            approve.textContent = '通过';
+            approve.onclick = () => handleAction(it.id, 'approved', noteInput.value);
+            const reject = document.createElement('button');
+            reject.textContent = '拒绝';
+            reject.onclick = () => handleAction(it.id, 'rejected', noteInput.value);
+            btnRow.appendChild(approve);
+            btnRow.appendChild(reject);
+            wrap.appendChild(btnRow);
+
+          } else {
+            // already reviewed - show readonly info
+            const info = document.createElement('div');
+            info.className = 'small';
+            info.style.marginTop = '8px';
+            const noteText = it.adminNote ? (' 备注：' + it.adminNote) : '';
+            info.textContent = '已审核：' + statusText(it.status) + noteText;
+            wrap.appendChild(info);
+          }
+          paymentsList.appendChild(wrap);
+        });
+
+        // pagination controls
+        const pager = document.createElement('div');
+        pager.style.marginTop = '8px';
+        const prev = document.createElement('button');
+        prev.textContent = '上一页';
+        prev.disabled = currentPage <= 1;
+        prev.onclick = () => { if(currentPage>1){ currentPage--; renderPage(); } };
+        const next = document.createElement('button');
+        next.textContent = '下一页';
+        next.style.marginLeft = '8px';
+        next.disabled = currentPage >= pageCount;
+        next.onclick = () => { if(currentPage<pageCount){ currentPage++; renderPage(); } };
+        const info = document.createElement('span');
+        info.className = 'small';
+        info.style.marginLeft = '12px';
+        info.textContent = `第 ${currentPage} / ${pageCount} 页 （共 ${total} 条）`;
+        pager.appendChild(prev);
+        pager.appendChild(next);
+        pager.appendChild(info);
+        paymentsList.appendChild(pager);
+      }
+
+      async function handleAction(id, action, adminNote){
+        const actionMap = { approved: '通过', rejected: '拒绝' };
+    const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
+        if(!ok) return;
+        paymentsStatus('提交中...');
+        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        try{
+          const r = await fetch('/api/admin/payments', {
+            method: 'PATCH',
+            headers: { 'content-type': 'application/json', 'x-admin-secret': secret },
+            body: JSON.stringify({ id, action, adminNote: adminNote || null })
+          });
+          const j = await r.json().catch(()=>({ok:false}));
+          if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
+          paymentsStatus('操作成功，刷新列表...');
+          await loadPayments();
+        }catch(e){ paymentsStatus('操作失败: ' + e.message); }
+      }
+
+      $('#loadPayments').onclick = loadPayments;
+      // 打开用户管理区（滚动到页面内）
+      const openBtn = document.getElementById('openUsers');
+      if(openBtn) openBtn.onclick = () => { const s = document.getElementById('usersSection'); if(s) s.scrollIntoView({behavior:'smooth'}); };
+    </script>
+    <script>
+      // ========== 用户管理脚本 ==========
+      const usersStatusEl = document.getElementById('usersStatus');
+      const usersBody = document.getElementById('usersBody');
+      const qInput = document.getElementById('q');
+
+      function usersStatus(txt){ if(usersStatusEl) usersStatusEl.textContent = txt; }
+
+      async function loadUsers(){
+        usersStatus('加载中...');
+        if(usersBody) usersBody.innerHTML = '';
+        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        if(!secret){ usersStatus('缺少管理员密钥'); return; }
+        try{
+          const r = await fetch('/api/admin/users', { headers: { 'x-admin-secret': secret } });
+          if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+          const j = await r.json();
+          if(!j.ok) throw new Error(j.error || 'unknown');
+          userRenderUsers(j.users || []);
+          usersStatus(`已加载 ${j.count || (j.users||[]).length} 位用户`);
+        }catch(e){ usersStatus('加载失败: ' + e.message); }
+      }
+
+      function userRenderUsers(list){
+        if(!usersBody) return;
+        usersBody.innerHTML = '';
+        const q = (qInput && qInput.value || '').toLowerCase().trim();
+        const filtered = (list||[]).filter(u=>{
+          if(!q) return true;
+          return (u.id||'').toString().toLowerCase().includes(q) || (u.displayName||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q);
+        });
+        if(filtered.length===0){ usersBody.innerHTML = '<tr><td colspan="7" class="small">无用户</td></tr>'; return; }
+        filtered.forEach(u=>{
+          const tr = document.createElement('tr');
+          const devs = u.devices ? Object.keys(u.devices).map(k=>`${k} (${u.devices[k] && u.devices[k].lastSeen? new Date(u.devices[k].lastSeen).toLocaleString() : ''})`).join('\n') : '';
+          tr.innerHTML = `<td>${u.id||''}</td><td>${u.displayName||''}</td><td>${u.email||''}</td><td>${u.createdAt? new Date(u.createdAt).toLocaleString(): '-'}</td><td>${u.lastLoginAt? new Date(u.lastLoginAt).toLocaleString(): '-'}</td><td><pre style="white-space:pre-wrap;margin:0">${devs}</pre></td><td><button class="viewBtn" data-id="${u.id}">查看</button> <button class="disableBtn" data-id="${u.id}">${u.disabled? '启用':'禁用'}</button> <button class="resetBtn" data-id="${u.id}">生成临时密码（仅显示一次）</button></td>`;
+          usersBody.appendChild(tr);
+        });
+        // attach handlers
+        document.querySelectorAll('#usersBody .viewBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userFetchUserDetail(id); });
+        document.querySelectorAll('#usersBody .disableBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userToggleDisable(id, ev.currentTarget); });
+        document.querySelectorAll('#usersBody .resetBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userResetPassword(id); });
+      }
+
+      // modal handlers
+      if(document.getElementById('modalClose')) document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
+
+      async function userFetchUserDetail(id){
+        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        if(!secret){ usersStatus('缺少管理员密钥'); return; }
+        usersStatus('加载用户详情...');
+        try{
+          const r = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
+          if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+          const j = await r.json(); if(!j.ok) throw new Error(j.error || 'unknown');
+          document.getElementById('modalTitle').textContent = '用户详情 — ' + (j.user && (j.user.username || j.user._id || j.user.id) || id);
+          document.getElementById('modalBody').textContent = JSON.stringify(j.user || j, null, 2);
+          document.getElementById('modal').style.display = 'flex';
+          usersStatus('');
+        }catch(e){ usersStatus('加载详情失败: ' + e.message); }
+      }
+
+      async function userToggleDisable(id, btn){
+        const ok = confirm('确定要切换用户 ' + id + ' 的启用/禁用 状态吗？'); if(!ok) return;
+        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim(); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+        try{
+          const r0 = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
+          if(!r0.ok) throw new Error(r0.status + ' ' + r0.statusText);
+          const j0 = await r0.json(); if(!j0.ok) throw new Error(j0.error || 'unknown');
+          const cur = !!(j0.user && j0.user.disabled);
+          const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, disabled: !cur }) });
+          if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+          const j = await r.json(); if(!j.ok) throw new Error(j.error || 'unknown');
+          alert('操作成功'); loadUsers();
+        }catch(e){ usersStatus('操作失败: ' + e.message); }
+      }
+
+      async function userResetPassword(id){
+        const ok = confirm('确定要为用户 ' + id + ' 生成临时密码吗？该密码只会显示一次，请及时复制并转交给用户。'); if(!ok) return;
+        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim(); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+        try{
+          const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, resetPassword: true }) });
+          if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+          const j = await r.json(); if(!j.ok) throw new Error(j.error || 'unknown');
+          const temp = j.update && j.update.tempPassword ? j.update.tempPassword : null;
+          if(temp) alert('已生成临时密码（仅显示一次）：\n' + temp + '\n\n请立即复制并转交给用户；页面不会再次显示该明文密码。');
+          else alert('已标记为需要重置密码（未返回临时密码）');
+          loadUsers();
+        }catch(e){ usersStatus('操作失败: ' + e.message); }
+      }
+
+      // bind
+      if(document.getElementById('loadUsers')) document.getElementById('loadUsers').onclick = loadUsers;
+      if(qInput) qInput.oninput = () => { if(usersBody && usersBody.childElementCount) loadUsers(); };
+    </script>
+  </body>
+  </html>
         status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
       } catch(e){
         status('加载失败: ' + e.message);
