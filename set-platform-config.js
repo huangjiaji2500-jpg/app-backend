@@ -27,17 +27,13 @@ module.exports = async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Nothing to update (expect displayRates or platformDeposit)' });
   }
 
-  // init firebase admin if needed
+  // init firestore (support FIREBASE_SERVICE_ACCOUNT_BASE64 or FIREBASE_SERVICE_ACCOUNT)
   try {
-    if (!admin.apps.length) {
-      const sa = process.env.FIREBASE_SERVICE_ACCOUNT;
-      if (!sa) return res.status(500).json({ ok: false, error: 'FIREBASE_SERVICE_ACCOUNT env missing' });
-      let cred;
-      try { cred = JSON.parse(sa); } catch (e) { return res.status(500).json({ ok: false, error: 'FIREBASE_SERVICE_ACCOUNT JSON parse error' }); }
-      admin.initializeApp({ credential: admin.credential.cert(cred) });
+    const fb = require('./lib/firestore');
+    const db = fb.getFirestore();
+    if (!db) {
+      return res.status(500).json({ ok: false, error: 'FIRESTORE not initialized: check FIREBASE_SERVICE_ACCOUNT_BASE64 or FIREBASE_SERVICE_ACCOUNT env' });
     }
-
-    const db = admin.firestore();
     const docRef = db.doc('platform/platform');
     const now = new Date().toISOString();
     const payload = { updatedAt: now };
