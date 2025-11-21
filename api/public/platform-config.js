@@ -1,4 +1,4 @@
-const { initFirebase, jsonResponse } = require('../../api/sync/_helpers');
+const { initFirebase, jsonResponse } = require('../../lib/sync_helpers');
 
 module.exports = async function(req, res){
   if (req.method === 'OPTIONS') return jsonResponse(res, 200, { ok:true });
