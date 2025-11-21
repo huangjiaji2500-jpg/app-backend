@@ -1,16 +1,7 @@
-.vercel
-
-.expo
-node_modules
-
-# Ignore APKs and Android/iOS build outputs
-*.apk
-*.aab
-*.keystore
-android/**/build/
-ios/**/build/
-
-# Logs and archives
+﻿# 忽略密钥文件
+serviceAccountKey.json
+# 忽略环境变量文件
+.env
+# 忽略日志和缓存文件
 *.log
-*.zip
-*.tar
+node_modules/

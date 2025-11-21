@@ -1,17 +1,44 @@
-# Exclude build artifacts and large files from Vercel deployments
+
+# Minimal .vercelignore for single-function deployment: include only api/all.js
 node_modules/
+dist/
+build/
 *.apk
 *.aab
-android/**/build/
-ios/**/build/
+
+# Include api handlers needed by the single-function entry
+api/*
+!api/all.js
+!api/public/
+!api/public/**
+!api/sync/
+!api/sync/**
+!api/debug/
+!api/debug/**
+api/admin/
+api/other/
+api/legacy/
+api/backup/
+api/[...all].js
+api/[...slug].js
+
+# Ignore other API files/backups that should not be deployed
+api/backup/
+api/[...all].js
+api/[...slug].js
+
+# Keep backups ignored
+api/backup/
+
+# Ignore legacy bracketed catch-all files that may conflict
+api/[...all].js
+api/[...slug].js
+
+# Exclude build artifacts and large files from Vercel deployments
 *.keystore
 *.log
 *.zip
 *.tar
 /.git/
 /.expo/
-dist/
-build/
 *.iml
-
-# Exclude project-internal or temporary API routes from Hobby deployments

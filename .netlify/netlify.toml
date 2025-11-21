@@ -1,0 +1,30 @@
+functionsDirectory = "C:\\Users\\Administrator\\Desktop\\制作APP\\netlify\\functions"
+functionsDirectoryOrigin = "default"
+plugins = []
+headers = []
+redirects = []
+
+[build]
+publish = "C:\\Users\\Administrator\\Desktop\\制作APP\\public"
+publishOrigin = "ui"
+commandOrigin = "ui"
+command = "hugo"
+functions = "C:\\Users\\Administrator\\Desktop\\制作APP\\netlify\\functions"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[functions]
+
+[functions."*"]

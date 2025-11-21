@@ -153,7 +153,14 @@ export async function registerWithUsernamePassword({ username, password, inviteC
     // 回退逻辑：生成一个伪 firebaseUid 并直接调用后端注册接口
     const firebaseUid = `no-fb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const deviceId = await getDeviceId();
-    const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
+    // Prefer a backend local-register endpoint if available
+    let resp = null;
+    try {
+      resp = await api.post('/auth/register-local', { username, password, inviteCode, deviceId });
+    } catch (e) {
+      // fallback to register-firebase if register-local not present
+      resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
+    }
     const token = resp.data?.token;
     global.__AUTH_TOKEN__ = token;
     await AsyncStorage.setItem('AUTH_TOKEN', token);
@@ -213,6 +220,20 @@ export async function loginWithUsernamePassword({ username, password }) {
     // 优先尝试使用后端的临时密码登录（若用户刚被管理员重置）
     try {
       const deviceId = await getDeviceId();
+      // First try server-side username/password login if available
+      try {
+        const localResp = await api.post('/auth/login-local', { username, password, deviceId });
+        const token = localResp.data?.token;
+        if (token) {
+          global.__AUTH_TOKEN__ = token;
+          await AsyncStorage.setItem('AUTH_TOKEN', token);
+          await AsyncStorage.setItem('CURRENT_USERNAME', username);
+          return { uid: localResp.data?.user?.id || null };
+        }
+      } catch (e) {
+        // ignore and try temp login
+      }
+
       const tempResp = await api.post('/auth/login-temp', { username, password, deviceId });
       const token = tempResp.data?.token;
       if (token) {

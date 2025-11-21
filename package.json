@@ -1,58 +1,29 @@
 {
-  "name": "usdt-trading-app",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web"
-  },
   "dependencies": {
-    "@expo/vector-icons": "^15.0.3",
-    "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-native-masked-view/masked-view": "0.3.2",
-    "@react-navigation/bottom-tabs": "^6.5.11",
-    "@react-navigation/native": "^6.1.9",
-    "@react-navigation/stack": "^6.3.20",
-    "@reduxjs/toolkit": "^2.2.1",
-    "@types/markdown-it": "^14.1.2",
-    "axios": "^1.6.0",
-    "expo": "~54.0.24",
-    "expo-clipboard": "~8.0.7",
-    "expo-crypto": "~15.0.7",
-    "expo-dev-client": "~6.0.18",
-    "expo-font": "~14.0.9",
-    "expo-haptics": "~15.0.7",
-    "expo-image-picker": "~17.0.8",
-    "expo-linear-gradient": "~15.0.7",
-    "expo-linking": "~8.0.9",
-    "expo-status-bar": "~3.0.8",
-    "expo-updates": "~29.0.12",
-    "firebase-admin": "^11.11.0",
-    "markdown-it": "^14.1.0",
-    "mongodb": "^7.0.0",
-    "protobufjs": "^7.5.4",
-    "react": "19.1.0",
-    "react-native": "0.81.5",
-    "react-native-animatable": "^1.3.3",
-    "react-native-gesture-handler": "~2.28.0",
-    "react-native-reanimated": "~4.1.1",
-    "react-native-safe-area-context": "~5.6.0",
-    "react-native-screens": "~4.16.0",
-    "react-native-swipe-gestures": "^1.0.5",
-    "react-native-vector-icons": "^10.0.0",
-    "react-native-worklets": "0.5.1",
-    "react-redux": "^9.1.0",
-    "socket.io-client": "^4.7.4",
-    "url-parse": "^1.5.10"
+    "bcryptjs": "^3.0.3",
+    "firebase-admin": "^13.6.0",
+    "jsonwebtoken": "^9.0.2"
   },
-  "devDependencies": {
-    "@babel/core": "^7.20.0",
-    "@types/react": "~19.1.10",
-    "babel-preset-expo": "~54.0.0",
-    "qrcode": "^1.5.1",
-    "typescript": "^5.1.3"
+  "name": "app-project",
+  "version": "1.0.0",
+  "description": "轻量安全的 USDT 出售/充值 App（Expo RN）。当前已实现：\r - 平台最小下单额度（默认 200，可在后台修改）\r - 后台访问防护（普通用户完全不可见）\r - 远端同步（orders / deposits / users / paymentMethods / rates / platformDeposit）\r - 免费实时数据互通（Vercel 无服务器 + HTTPS + HMAC 签名）\r - 本地备份/恢复、一键重试、崩溃兜底（ErrorBoundary）\r - Expo EAS 热更新（自动检测/下载 + 提示重启）",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
   },
-  "private": true
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huangjiaji2500-jpg/app-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/huangjiaji2500-jpg/app-backend/issues"
+  },
+  "homepage": "https://github.com/huangjiaji2500-jpg/app-backend#readme"
 }
