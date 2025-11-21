@@ -27,19 +27,62 @@
   </div>
 
   <div class="row">
-  <label>显示汇率（JSON）</label>
-  <textarea id="displayRates" placeholder='例如: {"USD":1.27, "CNY":9}'></textarea>
+    <label>显示汇率</label>
+    <div id="ratesForm" style="border:1px solid #eee;padding:8px;border-radius:6px;max-width:560px">
+      <table style="width:100%">
+        <thead><tr><th>法币类型</th><th>USDT 汇率</th></tr></thead>
+        <tbody>
+          <tr><td>USD</td><td><input data-currency="USD" class="rateInput" style="width:100%" /></td></tr>
+          <tr><td>CNY</td><td><input data-currency="CNY" class="rateInput" style="width:100%" /></td></tr>
+          <tr><td>KRW</td><td><input data-currency="KRW" class="rateInput" style="width:100%" /></td></tr>
+          <tr><td>JPY</td><td><input data-currency="JPY" class="rateInput" style="width:100%" /></td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:8px">
+        <button id="saveRates">保存汇率</button>
+        <button id="previewRates" style="margin-left:8px">预览生效状态</button>
+        <span id="ratesStatus" style="margin-left:12px"></span>
+      </div>
+      <div id="ratesPreview" style="margin-top:8px;display:none;padding:8px;background:#fafafa;border:1px dashed #eee"></div>
+    </div>
   </div>
 
   <div class="row">
-  <label>平台充值（JSON）</label>
-  <textarea id="platformDeposit" placeholder='例如: {"method":"qr","value":"..."}'></textarea>
+    <h2>平台收款二维码管理</h2>
+    <div style="max-width:640px;border:1px solid #eee;padding:12px;border-radius:6px">
+      <div style="margin-bottom:8px"><label>收款地址</label><br/><input id="pdAddress" style="width:100%" placeholder="收款地址（例如：USDT 地址）" /></div>
+      <div style="margin-bottom:8px"><label>备注说明</label><br/><input id="pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
+      <div style="margin-bottom:8px">
+        <label>上传二维码图片（PNG/JPG）</label><br/>
+        <input type="file" id="pdFile" accept="image/png,image/jpeg" />
+        <div id="pdPreviewWrap" style="margin-top:8px;display:none">
+          <div class="small">图片预览：</div>
+          <img id="pdPreview" src="" style="max-width:320px;border:1px solid #ddd;padding:6px;background:#fff" />
+        </div>
+      </div>
+      <div style="margin-top:6px">
+        <label><input type="checkbox" id="pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
+      </div>
+      <div style="margin-top:12px">
+        <button id="load">加载当前配置</button>
+        <button id="save" style="margin-left:8px">保存到服务器</button>
+        <span id="status" style="margin-left:12px"></span>
+      </div>
+    </div>
   </div>
 
-  <div class="row">
-  <button id="load">加载当前配置</button>
-  <button id="save">保存到服务器</button>
-    <span id="status" style="margin-left:12px"></span>
+  <!-- 新手引导模态 -->
+  <div id="onboardModal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;padding:18px;max-width:720px;margin:auto;border-radius:6px;box-shadow:0 8px 30px rgba(0,0,0,0.25)">
+      <h2>欢迎使用管理员后台 — 新手引导</h2>
+      <ol>
+        <li>第一步：设置并保存管理员密钥（顶部）。</li>
+        <li>第二步：在 <strong>汇率管理</strong> 中输入四个法币的汇率并点击“保存汇率”。</li>
+        <li>第三步：在 <strong>平台收款二维码管理</strong> 上传二维码图片、填写地址与备注，勾选“一键同步到所有用户端”后保存。</li>
+        <li>第四步：在 <strong>审核充值凭证</strong> 区域加载凭证并审核一笔（点击“通过”）。</li>
+      </ol>
+      <div style="text-align:right;margin-top:12px"><button id="onboardClose">我已了解，开始使用</button></div>
+    </div>
   </div>
 
   <script>
