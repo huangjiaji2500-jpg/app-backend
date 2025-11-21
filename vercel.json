@@ -3,8 +3,7 @@
     "api/**/*": {
       "runtime": "nodejs18.x"
     }
-  }
-  ,
+  },
   "ignore": [
     "node_modules/",
     "dist/",
