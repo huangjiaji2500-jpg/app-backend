@@ -1,1 +1,21 @@
-﻿
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>App Backend — Deployed</title>
+    <style>body{font-family:system-ui,Segoe UI,Arial,sans-serif;line-height:1.6;padding:40px;color:#222}a{color:#0366d6}</style>
+  </head>
+  <body>
+    <h1>App Backend 已部署</h1>
+    <p>部署成功，但该仓库没有前端页面内容（或页面被清空）。</p>
+    <p>你可以通过下面的 API 端点进行检查：</p>
+    <ul>
+      <li><a href="/api/me">/api/me</a> — 需要 Authorization Bearer token</li>
+      <li><a href="/api/public/platform-config">/api/public/platform-config</a> — 公共平台配置</li>
+      <li><a href="/api/sync/list">/api/sync/list</a> — 同步项列表（签名或时间戳验证）</li>
+    </ul>
+    <p>如果你希望我恢复之前的前端页面，请提供要恢复的 HTML 或告诉我从哪个提交恢复，我可以帮你把页面还原到 `public/index.html`。</p>
+    <p>或者我可以把一个更完整的静态站点/重定向添加到这里 —— 你想我现在做哪一种？</p>
+  </body>
+</html>
