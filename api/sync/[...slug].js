@@ -1,5 +1,5 @@
-const { initFirebase, jsonResponse, verifyGetSignature, verifyPostSignature } = require('./_helpers');
-const handlePost = require('./_post_handler');
+const { initFirebase, jsonResponse, verifyGetSignature, verifyPostSignature } = require('../../lib/sync_helpers');
+const handlePost = require('../../lib/sync_post_handler');
 const adminLib = require('firebase-admin');
 const { URL } = require('url');
 
