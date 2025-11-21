@@ -168,9 +168,6 @@ module.exports = async function(req, res){
     return jsonResponse(res, 404, { ok:false, error:'not_found' });
   }catch(e){
     console.error('[api/admin][...slug] error', e && (e.stack || e.message));
-    const resp = { ok:false, error:'internal_error' };
-    try{ resp.message = e && (e.message || String(e)); }catch(_){}
-    if(process.env.DEBUG === '1') try{ resp.stack = e && (e.stack || null); }catch(_){}
-    return jsonResponse(res, 500, resp);
+    return jsonResponse(res, 500, { ok:false, error:'internal_error' });
   }
 };
