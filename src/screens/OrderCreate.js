@@ -36,7 +36,7 @@ export default function OrderCreate({ route, navigation }){
   const [val, setVal] = useState('');
   // 单价改为使用“平台兑换比例”中的 USD 值（1 USDT = displayRates.USD），不再引用商家自定义单价
   const [priceUSD, setPriceUSD] = useState(1.0);
-  const [displayRates, setDisplayRates] = useState({ USD:1, CNY:11, KRW:2250, JPY:237 });
+  const [displayRates, setDisplayRates] = useState({ USD:1.2, CNY:9, KRW:1860, JPY:198 });
   const [methods, setMethods] = useState([]);
   const [selectedMethodId, setSelectedMethodId] = useState(null);
   // 使用平台集中默认值，后续异步加载真实配置

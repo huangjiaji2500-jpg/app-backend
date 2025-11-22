@@ -42,7 +42,7 @@ export default function MyOrders({ navigation }) {
   const [orders, setOrders] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [displayRates, setDisplayRates] = useState({ USD:1, CNY:11, KRW:2250, JPY:237 });
+  const [displayRates, setDisplayRates] = useState({ USD:1.2, CNY:9, KRW:1860, JPY:198 });
   const [localCurrency, setLocalCurrency] = useState('USD');
 
   useEffect(()=>{ (async ()=>{
