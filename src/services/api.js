@@ -25,6 +25,9 @@ export const api = axios.create({
   timeout: 10000,
 });
 
+// 打印初始 baseURL，帮助定位运行时是否被覆盖
+console.log('[api] initial baseURL =', api.defaults.baseURL);
+
 // 异步拉取远程配置并在成功时更新 api.defaults.baseURL
 async function initRemoteConfig() {
   try {
@@ -57,6 +60,9 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  try {
+    console.log('[api][request] ', config.method, config.baseURL, config.url);
+  } catch (e) {}
   return config;
 });
 
@@ -65,6 +71,10 @@ api.interceptors.response.use(
   (resp) => resp,
   (error) => {
     // 提供更详细的错误信息，帮助定位网络/后端问题
+    try {
+      console.error('[api][error] message=', error && error.message, 'code=', error && error.code, 'url=', error?.config?.url, 'baseURL=', error?.config?.baseURL, 'status=', error?.response?.status);
+      if (error?.response?.data) console.error('[api][error] response.data=', error.response.data);
+    } catch (e) {}
     const status = error?.response?.status;
     const serverMsg = error?.response?.data?.error || error?.response?.data || null;
     const msg = serverMsg || error.message || 'Network Error';
