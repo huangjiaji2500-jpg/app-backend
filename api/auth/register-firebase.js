@@ -1,0 +1,55 @@
+const adminLib = require('firebase-admin');
+const jwt = require('jsonwebtoken');
+
+function initFirebase() {
+  if (adminLib.apps && adminLib.apps.length) return adminLib.app();
+  const b64 = process.env.FIREBASE_SERVICE_ACCOUNT || '';
+  if (!b64) throw new Error('FIREBASE_SERVICE_ACCOUNT env var not set');
+  const json = Buffer.from(b64, 'base64').toString('utf8');
+  const serviceAccount = JSON.parse(json);
+  return adminLib.initializeApp({ credential: adminLib.credential.cert(serviceAccount) });
+}
+
+function jsonResponse(res, statusCode, body) {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.statusCode = statusCode;
+  res.end(JSON.stringify(body));
+}
+
+module.exports = async (req, res) => {
+  if (req.method === 'OPTIONS') return jsonResponse(res, 200, { ok: true });
+  if (req.method !== 'POST') return jsonResponse(res, 405, { error: 'method_not_allowed' });
+
+  try { initFirebase(); } catch (e) { console.error('[auth/register-firebase] firebase init error', e && e.message); return jsonResponse(res, 500, { error: 'firebase_not_configured' }); }
+  const db = adminLib.firestore();
+
+  let payload = {};
+  try { payload = req.body ? (typeof req.body === 'object' ? req.body : JSON.parse(req.body)) : {}; } catch (e) { return jsonResponse(res, 400, { error: 'invalid_json' }); }
+
+  const username = payload.username && String(payload.username).trim();
+  const firebaseUid = payload.firebaseUid && String(payload.firebaseUid).trim();
+  if (!username || !firebaseUid) return jsonResponse(res, 400, { error: 'username_and_firebaseUid_required' });
+
+  const JWT_SECRET = process.env.JWT_SECRET || '';
+  if (!JWT_SECRET) return jsonResponse(res, 500, { error: 'jwt_not_configured' });
+
+  try {
+    const usersRef = db.collection('users');
+    const q = await usersRef.where('username', '==', username).limit(1).get();
+    if (!q.empty) return jsonResponse(res, 409, { error: 'username_taken' });
+
+    const now = new Date().toISOString();
+    const doc = { username, firebaseUid, createdAt: now, updatedAt: now };
+    const added = await usersRef.add(doc);
+    const userId = added.id;
+    const token = jwt.sign({ id: userId, username }, JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
+    const userPublic = { id: userId, username, createdAt: now };
+    return jsonResponse(res, 200, { success: true, token, user: userPublic });
+  } catch (e) {
+    console.error('[auth/register-firebase] error', e && (e.stack || e.message));
+    return jsonResponse(res, 500, { error: 'internal_server_error' });
+  }
+};
