@@ -249,17 +249,61 @@ export async function loginWithUsernamePassword({ username, password }) {
       // 若后端未配置该路由或验证失败，退回到 Firebase 登录流程
     }
 
-    const { auth, signInWithEmailAndPassword } = await import('./firebase');
-    const email = usernameToEmail(username);
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    const firebaseUid = cred.user.uid;
-    const deviceId = await getDeviceId();
-    const resp = await api.post('/auth/login-firebase', { firebaseUid, deviceId });
-    const token = resp.data?.token;
-    global.__AUTH_TOKEN__ = token;
-    await AsyncStorage.setItem('AUTH_TOKEN', token);
-    await AsyncStorage.setItem('CURRENT_USERNAME', username);
-    return { uid: firebaseUid };
+    try {
+      const { auth, signInWithEmailAndPassword } = await import('./firebase');
+      const email = usernameToEmail(username);
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const firebaseUid = cred.user.uid;
+      const deviceId = await getDeviceId();
+      const resp = await api.post('/auth/login-firebase', { firebaseUid, deviceId });
+      const token = resp.data?.token;
+      global.__AUTH_TOKEN__ = token;
+      await AsyncStorage.setItem('AUTH_TOKEN', token);
+      await AsyncStorage.setItem('CURRENT_USERNAME', username);
+      return { uid: firebaseUid };
+    } catch (e) {
+      console.warn('[auth] firebase client login failed', e && e.message);
+      // 尝试回退到后端登录（如果后端提供此路由）以避免直接阻断用户
+      try {
+        const deviceId = await getDeviceId();
+        // 再次尝试后端的本地登录接口
+        try {
+          const localResp = await api.post('/auth/login-local', { username, password, deviceId });
+          const token = localResp.data?.token;
+          if (token) {
+            global.__AUTH_TOKEN__ = token;
+            await AsyncStorage.setItem('AUTH_TOKEN', token);
+            await AsyncStorage.setItem('CURRENT_USERNAME', username);
+            return { uid: localResp.data?.user?.id || null };
+          }
+        } catch (eLocal) {
+          console.warn('[auth] fallback login-local failed', eLocal && eLocal.message);
+        }
+
+        // 尝试后端的临时登录接口
+        try {
+          const tempResp = await api.post('/auth/login-temp', { username, password, deviceId });
+          const token = tempResp.data?.token;
+          if (token) {
+            global.__AUTH_TOKEN__ = token;
+            await AsyncStorage.setItem('AUTH_TOKEN', token);
+            await AsyncStorage.setItem('CURRENT_USERNAME', username);
+            if (tempResp.data?.mustChangePassword) {
+              return { uid: tempResp.data.user?.id || tempResp.data.user?.uid, mustChangePassword: true };
+            }
+            return { uid: tempResp.data.user?.id || tempResp.data.user?.uid };
+          }
+        } catch (eTemp) {
+          console.warn('[auth] fallback login-temp failed', eTemp && eTemp.message);
+        }
+
+        // 如果所有后端尝试均失败，返回友好错误供 UI 显示
+        throw new Error('登录失败：无法使用客户端或后端完成认证，请检查网络或联系管理员。');
+      } catch (finalErr) {
+        // 将最终错误抛出给调用者以便前端展示
+        throw finalErr;
+      }
+    }
   }
 }
 
