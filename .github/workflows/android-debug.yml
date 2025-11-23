@@ -19,6 +19,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Debug: print environment and versions
+        run: |
+          echo "--- GITHUB CONTEXT ---"
+          echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
+          echo "GITHUB_RUN_ID=$GITHUB_RUN_ID"
+          echo "GITHUB_RUN_NUMBER=$GITHUB_RUN_NUMBER"
+          echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
+          echo "--- SYSTEM INFO ---"
+          uname -a || true
+          node -v || true
+          npm -v || true
+          java -version || true
+          ./gradlew -v || true
+          echo "--- LIST workspace ---"
+          ls -la
+          echo "--- END DEBUG ---"
+
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
