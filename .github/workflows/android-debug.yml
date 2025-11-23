@@ -14,7 +14,7 @@ jobs:
     name: Build Android Debug APK
     runs-on: ubuntu-latest
     env:
-      ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -68,3 +68,25 @@ jobs:
         with:
           name: app-debug-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Create GitHub release for debug APK
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: debug-${{ github.run_id }}
+          release_name: Debug APK ${{ github.run_number }}
+          body: "Automated debug APK from workflow run ${{ github.run_id }}"
+          draft: false
+          prerelease: true
+
+      - name: Upload APK to release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: android/app/build/outputs/apk/debug/app-debug.apk
+          asset_name: app-debug-${{ github.run_id }}.apk
+          asset_content_type: application/vnd.android.package-archive
