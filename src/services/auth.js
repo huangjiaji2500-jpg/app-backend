@@ -105,25 +105,41 @@ export async function registerWithUsernamePassword({ username, password, inviteC
     // 后端创建用户文档：如果后端同步失败，则回滚本地用户并抛出错误，避免用户误认为已在后端注册
     try {
       const deviceId = await getDeviceId();
-      const resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
-      const token = resp.data?.token;
+      // 优先尝试后端的本地注册接口（若存在），再尝试 register-firebase
+      let resp = null;
+      try {
+        resp = await api.post('/auth/register-local', { username, password, inviteCode, deviceId });
+      } catch (eLocal) {
+        console.warn('[auth] register-local failed, will try register-firebase', eLocal && eLocal.message);
+      }
+      if (!resp) {
+        try {
+          resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
+        } catch (eFb) {
+          console.warn('[auth] register-firebase failed', eFb && eFb.message);
+        }
+      }
+
+      const token = resp?.data?.token;
       if (token) {
         global.__AUTH_TOKEN__ = token;
         await AsyncStorage.setItem('AUTH_TOKEN', token);
+      } else {
+        // 回滚本地创建的用户
+        try {
+          const users = await getLocalUsers();
+          if (users && users[username]) {
+            delete users[username];
+            await setLocalUsers(users);
+          }
+        } catch (ro) {
+          console.warn('[auth] rollback local user failed', ro && ro.message);
+        }
+        throw new Error('后端注册失败：网络或服务器不可用，请稍后重试');
       }
     } catch (e) {
-      // 回滚本地创建的用户
-      try {
-        const users = await getLocalUsers();
-        if (users && users[username]) {
-          delete users[username];
-          await setLocalUsers(users);
-        }
-      } catch (ro) {
-        console.warn('[auth] rollback local user failed', ro && ro.message);
-      }
       // 将错误抛出给调用者以便前端展示失败信息
-      throw new Error((e && e.message) ? `后端注册失败: ${e.message}` : '后端注册失败');
+      throw e;
     }
     await AsyncStorage.setItem('CURRENT_USERNAME', username);
     return { uid: firebaseUid };
@@ -150,18 +166,25 @@ export async function registerWithUsernamePassword({ username, password, inviteC
       console.warn('[auth] firebase client not available, falling back to backend-only registration', e && e.message);
     }
 
-    // 回退逻辑：生成一个伪 firebaseUid 并直接调用后端注册接口
+    // 回退逻辑：生成一个伪 firebaseUid 并直接调用后端注册接口，优先尝试 register-local
     const firebaseUid = `no-fb_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const deviceId = await getDeviceId();
-    // Prefer a backend local-register endpoint if available
     let resp = null;
     try {
-      resp = await api.post('/auth/register-local', { username, password, inviteCode, deviceId });
+      try {
+        resp = await api.post('/auth/register-local', { username, password, inviteCode, deviceId });
+      } catch (eLocal) {
+        console.warn('[auth] register-local not available or failed, will try register-firebase', eLocal && eLocal.message);
+      }
+      if (!resp) {
+        resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
+      }
     } catch (e) {
-      // fallback to register-firebase if register-local not present
-      resp = await api.post('/auth/register-firebase', { username, firebaseUid, inviteCode, deviceId });
+      // 将错误包装为更友好的信息供 UI 显示
+      throw new Error((e && e.message) ? `后端注册失败: ${e.message}` : '后端注册失败');
     }
     const token = resp.data?.token;
+    if (!token) throw new Error('后端注册失败：未返回 token');
     global.__AUTH_TOKEN__ = token;
     await AsyncStorage.setItem('AUTH_TOKEN', token);
     await AsyncStorage.setItem('CURRENT_USERNAME', username);
