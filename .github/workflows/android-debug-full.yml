@@ -45,9 +45,24 @@ jobs:
         run: |
           yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-31" "build-tools;31.0.0"
 
-      - name: Build debug APK with Gradle
-        working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+      - name: List repository (debug)
+        run: |
+          echo "Repository tree:" 
+          ls -la || true
+          echo "Top-level files:" 
+          find . -maxdepth 2 -type d -print || true
+
+      - name: Build debug APK with Gradle (safe)
+        run: |
+          if [ ! -d "./android" ]; then
+            echo "ERROR: 'android' directory not found in repository root.\nTo build a native APK you need an Android project folder named 'android' containing the Gradle wrapper (gradlew).\nIf this is an Expo managed project, consider using EAS Build or run 'expo prebuild' to generate native projects." >&2
+            exit 1
+          fi
+          if [ ! -x ./android/gradlew ] && [ -f ./android/gradlew ]; then
+            chmod +x ./android/gradlew || true
+          fi
+          cd android
+          ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
