@@ -9,7 +9,7 @@ on:
       name: Android Debug Build (Cloud)
 
       on:
-        workflow_dispatch: {}
+        workflow_dispatch:
         push:
           paths:
             - 'android/**'
@@ -78,7 +78,6 @@ on:
                 cd $ANDROID_SDK_ROOT/cmdline-tools
                 curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
                 unzip -q commandlinetools.zip
-                # Ensure the tools are available under 'latest'
                 mv cmdline-tools latest || true
 
             - name: Accept licenses and install platform/build-tools
