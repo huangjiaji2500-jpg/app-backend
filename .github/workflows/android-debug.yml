@@ -5,7 +5,6 @@ on:
   push:
     paths:
       - 'android/**'
-      - 'app/**'
       name: Android Debug Build (Cloud)
 
       on:
@@ -27,47 +26,16 @@ on:
             - name: Checkout repository
               uses: actions/checkout@v4
 
-            - name: Debug: print environment and versions
-              run: |
-                echo "--- GITHUB CONTEXT ---"
-                echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
-                echo "GITHUB_RUN_ID=$GITHUB_RUN_ID"
-                echo "GITHUB_RUN_NUMBER=$GITHUB_RUN_NUMBER"
-                echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
-                echo "--- SYSTEM INFO ---"
-                uname -a || true
-                node -v || true
-                npm -v || true
-                java -version || true
-                ./gradlew -v || true
-                echo "--- LIST workspace ---"
-                ls -la
-                echo "--- END DEBUG ---"
-
             - name: Set up JDK 11
               uses: actions/setup-java@v4
               with:
-                distribution: 'temurin'
+                distribution: temurin
                 java-version: '11'
 
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
                 node-version: '18'
-
-            - name: Cache Gradle
-              uses: actions/cache@v4
-              with:
-                path: |
-                  ~/.gradle/caches
-                  ~/.gradle/wrapper
-                key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
-            - name: Cache npm
-              uses: actions/cache@v4
-              with:
-                path: ~/.npm
-                key: npm-${{ hashFiles('**/package-lock.json') }}
 
             - name: Install npm dependencies
               run: npm ci
