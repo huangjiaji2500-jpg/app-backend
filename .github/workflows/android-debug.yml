@@ -6,176 +6,114 @@ on:
     paths:
       - 'android/**'
       - 'app/**'
-      - 'src/**'
-      - '.github/workflows/**'
+      name: Android Debug Build (Cloud)
 
-jobs:
-  build-debug-apk:
-    name: Build Android Debug APK
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      on:
+        workflow_dispatch: {}
+        push:
+          paths:
+            - 'android/**'
+            - 'app/**'
+            - 'src/**'
+            - '.github/workflows/**'
 
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
+      jobs:
+        build-debug-apk:
+          name: Build Android Debug APK
+          runs-on: ubuntu-latest
+          env:
+            ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
+          steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Debug: print environment and versions
+              run: |
+                echo "--- GITHUB CONTEXT ---"
+                echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
+                echo "GITHUB_RUN_ID=$GITHUB_RUN_ID"
+                echo "GITHUB_RUN_NUMBER=$GITHUB_RUN_NUMBER"
+                echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
+                echo "--- SYSTEM INFO ---"
+                uname -a || true
+                node -v || true
+                npm -v || true
+                java -version || true
+                ./gradlew -v || true
+                echo "--- LIST workspace ---"
+                ls -la
+                echo "--- END DEBUG ---"
+
+            - name: Set up JDK 11
+              uses: actions/setup-java@v4
+              with:
+                distribution: 'temurin'
+                java-version: '11'
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                node-version: '18'
+
+            - name: Cache Gradle
+              uses: actions/cache@v4
+              with:
+                path: |
+                  ~/.gradle/caches
+                  ~/.gradle/wrapper
+                key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+            - name: Cache npm
+              uses: actions/cache@v4
+              with:
+                path: ~/.npm
+                key: npm-${{ hashFiles('**/package-lock.json') }}
+
+            - name: Install npm dependencies
+              run: npm ci
+
+            - name: Install Android SDK commandline tools
+              run: |
+                mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+                cd $ANDROID_SDK_ROOT/cmdline-tools
+                curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+                unzip -q commandlinetools.zip
+                # Ensure the tools are available under 'latest'
+                mv cmdline-tools latest || true
+
+            - name: Accept licenses and install platform/build-tools
+              run: |
+                yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-31" "build-tools;31.0.0"
+
+            - name: Build debug APK with Gradle
+              working-directory: android
+              run: ./gradlew assembleDebug --no-daemon
+
+            - name: Upload APK artifact
+              uses: actions/upload-artifact@v3
+              with:
+                name: app-debug-apk
+                path: android/app/build/outputs/apk/debug/app-debug.apk
+
+            - name: Create GitHub release for debug APK
+              id: create_release
+              uses: actions/create-release@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                tag_name: debug-${{ github.run_id }}
+                release_name: Debug APK ${{ github.run_number }}
+                body: "Automated debug APK from workflow run ${{ github.run_id }}"
+                draft: false
+                prerelease: true
+
+            - name: Upload APK to release
+              uses: actions/upload-release-asset@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                upload_url: ${{ steps.create_release.outputs.upload_url }}
+                asset_path: android/app/build/outputs/apk/debug/app-debug.apk
+                asset_name: app-debug-${{ github.run_id }}.apk
+                asset_content_type: application/vnd.android.package-archive
         with:
-          distribution: temurin
-          java-version: '11'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Install Android SDK commandline tools
-        run: |
-          mkdir -p $HOME/android-sdk/cmdline-tools
-          cd $HOME/android-sdk/cmdline-tools
-          curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools.zip
-          mv cmdline-tools latest || true
-
-      - name: Accept licenses and install platform/build-tools
-        run: |
-          yes | $HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=$HOME/android-sdk "platform-tools" "platforms;android-31" "build-tools;31.0.0"
-
-      - name: Build debug APK with Gradle
-        working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: app-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Create GitHub release for debug APK
-        id: create_release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: debug-${{ github.run_id }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload APK to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: android/app/build/outputs/apk/debug/app-debug.apk
-          asset_name: app-debug-${{ github.run_id }}.apk
-          asset_content_type: application/vnd.android.package-archive
-name: Android Debug Build (Cloud)
-
-on:
-  workflow_dispatch: {}
-  push:
-    paths:
-      - 'android/**'
-      - 'app/**'
-      - 'src/**'
-      - '.github/workflows/**'
-
-jobs:
-  build-debug-apk:
-    name: Build Android Debug APK
-    runs-on: ubuntu-latest
-    env:
-      ANDROID_SDK_ROOT: ${{ github.workspace }}/.android-sdk
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Debug: print environment and versions
-        run: |
-          echo "--- GITHUB CONTEXT ---"
-          echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
-          echo "GITHUB_RUN_ID=$GITHUB_RUN_ID"
-          echo "GITHUB_RUN_NUMBER=$GITHUB_RUN_NUMBER"
-          echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
-          echo "--- SYSTEM INFO ---"
-          uname -a || true
-          node -v || true
-          npm -v || true
-          java -version || true
-          ./gradlew -v || true
-          echo "--- LIST workspace ---"
-          ls -la
-          echo "--- END DEBUG ---"
-
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: npm-${{ hashFiles('**/package-lock.json') }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install npm dependencies
-        run: npm ci
-
-      - name: Install Android SDK commandline tools
-        run: |
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-          cd $ANDROID_SDK_ROOT/cmdline-tools
-          curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
-          unzip -q commandlinetools.zip
-          mv cmdline-tools latest
-
-      - name: Accept licenses and install platform/build-tools
-        run: |
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-31" "build-tools;31.0.0"
-
-      - name: Build debug APK with Gradle
-        working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: app-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Create GitHub release for debug APK
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: debug-${{ github.run_id }}
-          release_name: Debug APK ${{ github.run_number }}
-          body: "Automated debug APK from workflow run ${{ github.run_id }}"
-          draft: false
-          prerelease: true
-
-      - name: Upload APK to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: android/app/build/outputs/apk/debug/app-debug.apk
-          asset_name: app-debug-${{ github.run_id }}.apk
-          asset_content_type: application/vnd.android.package-archive
