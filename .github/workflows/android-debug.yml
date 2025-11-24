@@ -53,17 +53,35 @@ on:
               with:
                 node-version: '18'
 
-            name: Android Debug Build (Validation)
+            - name: Install npm dependencies
+              run: npm ci
 
-            on:
-              workflow_dispatch:
+            - name: Install Android SDK commandline tools
+              run: |
+                mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+                cd $ANDROID_SDK_ROOT/cmdline-tools
+                curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+                unzip -q commandlinetools.zip
+                mv cmdline-tools latest || true
 
-            jobs:
-              validate-yaml:
-                runs-on: ubuntu-latest
-                steps:
-                  - name: Checkout
-                    uses: actions/checkout@v4
-                  - name: Print confirmation
-                    run: echo "android-debug.yml parsed successfully"
+            - name: Accept licenses and install platform/build-tools
+              run: |
                 yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-31" "build-tools;31.0.0"
+
+            - name: Build debug APK with Gradle
+              working-directory: android
+              run: ./gradlew assembleDebug --no-daemon
+name: Android Debug Build (Validation)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Print confirmation
+        run: echo "android-debug.yml parsed successfully"
+                      uses: actions/checkout@v4
