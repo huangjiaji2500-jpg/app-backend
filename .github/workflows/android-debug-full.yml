@@ -43,7 +43,13 @@ jobs:
 
       - name: Accept licenses and install platform/build-tools
         run: |
-          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-31" "build-tools;31.0.0"
+          # ensure sdkmanager is on PATH for this step
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+          mkdir -p $ANDROID_SDK_ROOT/licenses
+          # install common platforms and build-tools used by Android projects
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platform-tools" "platforms;android-31" "platforms;android-33" "build-tools;31.0.0" "build-tools;33.0.2"
+          # accept all licenses non-interactively
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT --licenses || true
 
       - name: List repository (debug)
         run: |
@@ -72,10 +78,12 @@ jobs:
             chmod +x ./android/gradlew || true
           fi
           cd android
-            echo "=== ./gradlew --version output ==="
-            ./gradlew --version || true
-            echo "=== Running assembleDebug with --stacktrace --info ==="
-            ./gradlew assembleDebug --no-daemon --stacktrace --info
+          # ensure platform-tools are available in PATH for gradle (adb if used)
+          export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+          echo "=== ./gradlew --version output ==="
+          ./gradlew --version || true
+          echo "=== Running assembleDebug with --stacktrace --info ==="
+          ./gradlew assembleDebug --no-daemon --stacktrace --info
           ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK artifact
