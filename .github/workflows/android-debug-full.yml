@@ -51,6 +51,16 @@ jobs:
           ls -la || true
           echo "Top-level files:" 
           find . -maxdepth 2 -type d -print || true
+        - name: Print Java & environment info
+          run: |
+            echo "=== java -version ==="
+            java -version || true
+            echo "=== env | sort ==="
+            env | sort || true
+            echo "=== which java ==="
+            which java || true
+            echo "=== ls android contents ==="
+            ls -la android || true
 
       - name: Build debug APK with Gradle (safe)
         run: |
@@ -62,6 +72,10 @@ jobs:
             chmod +x ./android/gradlew || true
           fi
           cd android
+            echo "=== ./gradlew --version output ==="
+            ./gradlew --version || true
+            echo "=== Running assembleDebug with --stacktrace --info ==="
+            ./gradlew assembleDebug --no-daemon --stacktrace --info
           ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK artifact
