@@ -87,6 +87,11 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
           echo "local.properties content:" && cat android/local.properties || true
 
+      - name: Locate gradlew (diagnostic)
+        run: |
+          echo "Searching for gradlew in workspace:"
+          find . -maxdepth 6 -type f -name gradlew -print -ls || true
+
       - name: Build debug APK with Gradle (safe)
         shell: bash
         run: |
