@@ -92,6 +92,21 @@ jobs:
           echo "Searching for gradlew in workspace:"
           find . -maxdepth 6 -type f -name gradlew -print -ls || true
 
+      - name: Test gradlew execution (diagnostic, non-fatal)
+        run: |
+          echo "--- gradlew diagnostic ---"
+          if [ -f android/gradlew ]; then
+            echo "Found android/gradlew"
+            ls -l android/gradlew || true
+            file android/gradlew || true
+            echo "Showing first 10 lines of android/gradlew:" || true
+            head -n 10 android/gradlew || true
+            echo "Attempting to run android/gradlew --version (may fail)" || true
+            bash -x android/gradlew --version || true
+          else
+            echo "android/gradlew not found for diagnostic" || true
+          fi
+
       - name: Build debug APK with Gradle (safe)
         shell: bash
         run: |
