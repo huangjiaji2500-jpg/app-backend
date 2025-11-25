@@ -64,27 +64,28 @@ jobs:
 
       - name: List repository (debug)
         run: |
-          echo "Repository tree:" 
+          echo "Repository tree:"
           ls -la || true
-          echo "Top-level files:" 
+          echo "Top-level files:"
           find . -maxdepth 2 -type d -print || true
-        - name: Print Java & environment info
-          run: |
-            echo "=== java -version ==="
-            java -version || true
-            echo "=== env | sort ==="
-            env | sort || true
-            echo "=== which java ==="
-            which java || true
-            echo "=== ls android contents ==="
-            ls -la android || true
 
-        - name: Write android/local.properties for sdk location
-          run: |
-            echo "Writing local.properties pointing to Android SDK"
-            mkdir -p android || true
-            echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-            echo "local.properties content:" && cat android/local.properties || true
+      - name: Print Java & environment info
+        run: |
+          echo "=== java -version ==="
+          java -version || true
+          echo "=== env | sort ==="
+          env | sort || true
+          echo "=== which java ==="
+          which java || true
+          echo "=== ls android contents ==="
+          ls -la android || true
+
+      - name: Write android/local.properties for sdk location
+        run: |
+          echo "Writing local.properties pointing to Android SDK"
+          mkdir -p android || true
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "local.properties content:" && cat android/local.properties || true
 
       - name: Build debug APK with Gradle (safe)
         run: |
