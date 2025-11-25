@@ -88,20 +88,39 @@ jobs:
           echo "local.properties content:" && cat android/local.properties || true
 
       - name: Build debug APK with Gradle (safe)
+        shell: bash
         run: |
+          set -euxo pipefail
+          echo "DEBUG: Listing workspace top-level"
+          ls -la || true
+          echo "DEBUG: Listing android directory"
+          ls -la android || true
+
           if [ ! -d "./android" ]; then
-            echo "ERROR: 'android' directory not found in repository root.\nTo build a native APK you need an Android project folder named 'android' containing the Gradle wrapper (gradlew).\nIf this is an Expo managed project, consider using EAS Build or run 'expo prebuild' to generate native projects." >&2
+            echo "ERROR: 'android' directory not found in repository root." >&2
             exit 1
           fi
-          if [ ! -x ./android/gradlew ] && [ -f ./android/gradlew ]; then
-            chmod +x ./android/gradlew || true
+
+          # Normalize line endings of gradlew in case of CRLF issues from Windows commits
+          if [ -f android/gradlew ]; then
+            echo "DEBUG: gradlew shebang: "
+            head -n 1 android/gradlew || true
+            echo "DEBUG: normalizing line endings for android/gradlew"
+            sed -i 's/\r$//' android/gradlew || true
+            chmod +x android/gradlew || true
+          else
+            echo "ERROR: android/gradlew not found" >&2
+            exit 127
           fi
+
           # set GRADLE user home to workspace-local cache
           export GRADLE_USER_HOME="${GITHUB_WORKSPACE}/.gradle"
           mkdir -p "$GRADLE_USER_HOME"
           cd android
+
           # ensure platform-tools are available in PATH for gradle (adb if used)
           export PATH="$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+
           echo "=== ./gradlew --version output ==="
           ./gradlew --version || true
           echo "=== Running assembleDebug with --stacktrace --info ==="
