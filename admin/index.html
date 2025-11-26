@@ -274,7 +274,8 @@
     let pageSize = 8;
     let currentPage = 1;
 
-  filterSelect.value = 'all';
+  // 默认只显示待审核项
+  filterSelect.value = 'pending';
     filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
 
     async function loadPayments() {
@@ -288,7 +289,7 @@
         const j = await r.json();
   paymentsData = j.payments || [];
   paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
-        try{ rawResponseEl.style.display = 'block'; rawResponseEl.textContent = JSON.stringify(j, null, 2); }catch(e){ /* ignore */ }
+        try{ rawResponseEl.textContent = JSON.stringify(j, null, 2); }catch(e){ /* ignore */ }
         currentPage = 1;
         renderPage();
       }catch(e){ paymentsStatus('加载失败: ' + e.message); }
@@ -301,9 +302,14 @@
 
     function renderPage(){
       if(!paymentsData || !paymentsData.length){ paymentsList.innerHTML = '<div class="small">没有充值凭证。</div>'; return; }
-      // apply filter
+      // apply filter (尊重 payload.item.status / payload.status / top-level status)
       const filtered = paymentsData.filter(it => {
-        if(currentFilter === 'pending') return (it.status || 'pending') === 'pending';
+        if(currentFilter === 'pending'){
+          const p = it && it.payload ? it.payload : {};
+          const item = p.item || p.deposit || p || {};
+          const st = (it && it.status) || item.status || p.status || 'pending';
+          return st === 'pending';
+        }
         return true;
       });
       const total = filtered.length;
@@ -319,23 +325,42 @@
         wrap.style.border = '1px solid #ddd';
         wrap.style.padding = '10px';
         wrap.style.marginBottom = '8px';
-  const title = document.createElement('div');
-  title.innerHTML = `<strong>用户:</strong> ${it.uid || '未知'} &nbsp; <strong>金额(USDT):</strong> ${it.amount || 0} &nbsp; <strong>状态:</strong> ${statusText(it.status || 'pending')}`;
+
+        // 兼容多种数据形态，优先使用 payload.item 的字段
+        const payload = (it && it.payload) || {};
+        const item = payload.item || payload.deposit || payload || {};
+        const username = item.username || item.user || it.username || it.uid || payload.username || '未知';
+        const amount = Number(item.amountApprovedUSDT || item.amountApproved || item.amount || it.amount || payload.amount || 0) || 0;
+        const docId = it._id || it.id || (item.id || payload.id) || '-';
+        const createdRaw = it.receivedAt || it.createdAt || payload.receivedAt || payload.createdAt || item.createdAt || item.ts || item.time || payload.ts || null;
+        const created = createdRaw ? fmtDate(createdRaw) : '-';
+
+        const title = document.createElement('div');
+        title.innerHTML = `<strong>用户：</strong> ${username} &nbsp; | &nbsp; <strong>充值金额：</strong> ${amount} USDT &nbsp; | &nbsp; <strong>创建时间：</strong> ${created}`;
+
         const meta = document.createElement('div');
         meta.className = 'small';
         meta.style.marginTop = '6px';
-  meta.textContent = `id: ${it.id}  创建时间: ${fmtDate(it.createdAt || it.createdAtISO || it.createdAt)} `;
+        meta.textContent = `记录ID: ${docId}  状态: ${statusText(it.status || (item.status || payload.status) || 'pending')}`;
         wrap.appendChild(title);
         wrap.appendChild(meta);
-        if(it.receiptViewUrl || it.receiptUrl){
+
+        // 充值凭证预览区域（更清晰的展示）
+        const receiptUrl = it.receiptViewUrl || it.receiptUrl || item.receiptViewUrl || item.receiptUrl || payload.receiptUrl || payload.receiptViewUrl || item.image || item.screenshot || null;
+        const previewWrap = document.createElement('div');
+        previewWrap.style.marginTop = '8px';
+        const previewLabel = document.createElement('div');
+        previewLabel.className = 'small';
+        previewLabel.style.fontWeight = '600';
+        previewLabel.textContent = '充值凭证预览：';
+        previewWrap.appendChild(previewLabel);
+        if(receiptUrl){
           const img = document.createElement('img');
-          img.src = it.receiptViewUrl || it.receiptUrl;
-          img.alt = '收据图片';
+          img.src = receiptUrl;
+          img.alt = '充值凭证图片';
           img.style.maxWidth = '320px';
           img.style.display = 'block';
-          img.style.marginTop = '8px';
-          // Fallback: if external placeholder cannot be resolved (DNS issues),
-          // replace with an inline SVG data URL placeholder so the UI stays informative.
+          img.style.marginTop = '6px';
           const svgPlaceholder = 'data:image/svg+xml;utf8,' + encodeURIComponent(
             '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180">'
             + '<rect width="100%" height="100%" fill="#f3f3f3"/>'
@@ -343,14 +368,19 @@
             + 'font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#666">'
             + '暂无图片或无法加载</text></svg>'
           );
-          img.onerror = function(){
-            this.onerror = null;
-            try{ this.src = svgPlaceholder; }catch(e){ /* ignore */ }
-          };
-          wrap.appendChild(img);
+          img.onerror = function(){ this.onerror = null; try{ this.src = svgPlaceholder; }catch(e){} };
+          previewWrap.appendChild(img);
+        } else {
+          const noImg = document.createElement('div');
+          noImg.className = 'small';
+          noImg.style.marginTop = '6px';
+          noImg.textContent = '无凭证图片。';
+          previewWrap.appendChild(noImg);
         }
+        wrap.appendChild(previewWrap);
         // If the payment is still pending show editable adminNote + action buttons
-        if ((it.status || 'pending') === 'pending') {
+        const pendingState = ((it && it.status) || (item && item.status) || (payload && payload.status) || 'pending');
+        if (pendingState === 'pending') {
           const noteRow = document.createElement('div');
           noteRow.style.marginTop = '8px';
           const noteLabel = document.createElement('div');
@@ -368,10 +398,10 @@
           btnRow.style.marginTop = '8px';
           const approve = document.createElement('button');
           approve.textContent = '通过';
-          approve.onclick = () => handleAction(it.id, 'approved', noteInput.value);
+          approve.onclick = () => handleAction(docId, 'approved', noteInput.value);
           const reject = document.createElement('button');
           reject.textContent = '拒绝';
-          reject.onclick = () => handleAction(it.id, 'rejected', noteInput.value);
+          reject.onclick = () => handleAction(docId, 'rejected', noteInput.value);
           btnRow.appendChild(approve);
           btnRow.appendChild(reject);
           wrap.appendChild(btnRow);
@@ -381,8 +411,10 @@
           const info = document.createElement('div');
           info.className = 'small';
           info.style.marginTop = '8px';
-          const noteText = it.adminNote ? (' 备注：' + it.adminNote) : '';
-          info.textContent = '已审核：' + statusText(it.status) + noteText;
+          const adminNoteText = (payload && payload.adminNote) || it.adminNote || '';
+          const statusVal = (it && it.status) || (item && item.status) || (payload && payload.status) || '';
+          const noteText = adminNoteText ? (' 备注：' + adminNoteText) : '';
+          info.textContent = '已审核：' + statusText(statusVal) + noteText;
           wrap.appendChild(info);
         }
         paymentsList.appendChild(wrap);
