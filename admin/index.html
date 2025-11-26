@@ -326,11 +326,18 @@
         wrap.style.padding = '10px';
         wrap.style.marginBottom = '8px';
 
-        // 兼容多种数据形态，优先使用 payload.item 的字段
+        // 兼容多种数据形态，优先使用 payload.item（或 payload.deposit.item）或嵌套的 item
         const payload = (it && it.payload) || {};
-        const item = payload.item || payload.deposit || payload || {};
+        const item = payload.item || (payload.deposit && payload.deposit.item) || payload.deposit || payload || {};
         const username = item.username || item.user || it.username || it.uid || payload.username || '未知';
-        const amount = Number(item.amountApprovedUSDT || item.amountApproved || item.amount || it.amount || payload.amount || 0) || 0;
+        const amount = Number(
+          // prefer approved -> amount -> requested; check nested item.item as well
+          (item && (item.amountApprovedUSDT || item.amountApproved || item.amount)) ||
+          ((item && item.item) && (item.item.amountApprovedUSDT || item.item.amountApproved || item.item.amount)) ||
+          (item && (item.amountRequestedUSDT || item.amountRequested)) ||
+          ((item && item.item) && (item.item.amountRequestedUSDT || item.item.amountRequested)) ||
+          it.amount || payload.amount || 0
+        ) || 0;
         const docId = it._id || it.id || (item.id || payload.id) || '-';
         const createdRaw = it.receivedAt || it.createdAt || payload.receivedAt || payload.createdAt || item.createdAt || item.ts || item.time || payload.ts || null;
         const created = createdRaw ? fmtDate(createdRaw) : '-';
@@ -346,7 +353,18 @@
         wrap.appendChild(meta);
 
         // 充值凭证预览区域（更清晰的展示）
-        const receiptUrl = it.receiptViewUrl || it.receiptUrl || item.receiptViewUrl || item.receiptUrl || payload.receiptUrl || payload.receiptViewUrl || item.image || item.screenshot || null;
+        // support various legacy/modern fields: proofImage, images array, attachments, receiptUrl, etc.
+        const receiptUrl = (
+          it.receiptViewUrl || it.receiptUrl ||
+          // item-level
+          item.receiptViewUrl || item.receiptUrl || item.proofImage || item.proofImageUrl ||
+          // nested item.item
+          (item && item.item && (item.item.proofImage || item.item.proofImageUrl || item.item.receiptViewUrl || item.item.receiptUrl)) ||
+          // deposit.item fallback
+          (payload.deposit && payload.deposit.proofImage) || (payload.deposit && payload.deposit.proofImageUrl) || (payload.deposit && payload.deposit.receiptUrl) ||
+          // legacy arrays
+          (item.images && item.images[0]) || (item.attachments && item.attachments[0]) || item.image || item.screenshot || null
+        );
         const previewWrap = document.createElement('div');
         previewWrap.style.marginTop = '8px';
         const previewLabel = document.createElement('div');
@@ -394,14 +412,34 @@
           noteRow.appendChild(noteInput);
           wrap.appendChild(noteRow);
 
+          // 允许管理员在审核时填写批准金额（USDT），若留空则使用申请金额
+          const amtRow = document.createElement('div');
+          amtRow.style.marginTop = '8px';
+          const amtLabel = document.createElement('div');
+          amtLabel.className = 'small';
+          amtLabel.style.fontWeight = '600';
+          amtLabel.textContent = '批准金额（USDT，可留空使用申请金额）：';
+          const amtInput = document.createElement('input');
+          amtInput.type = 'number';
+          amtInput.style.width = '200px';
+          // populate approve input from approved/amount/requested, also check nested item.item
+          amtInput.value = (
+            item.amountApprovedUSDT || item.amountApproved || item.amount ||
+            (item.item && (item.item.amountApprovedUSDT || item.item.amountApproved || item.item.amount)) ||
+            item.amountRequestedUSDT || item.amountRequested || ''
+          );
+          amtRow.appendChild(amtLabel);
+          amtRow.appendChild(amtInput);
+          wrap.appendChild(amtRow);
+
           const btnRow = document.createElement('div');
           btnRow.style.marginTop = '8px';
           const approve = document.createElement('button');
           approve.textContent = '通过';
-          approve.onclick = () => handleAction(docId, 'approved', noteInput.value);
+          approve.onclick = () => handleAction(docId, 'approved', noteInput.value, amtInput.value);
           const reject = document.createElement('button');
           reject.textContent = '拒绝';
-          reject.onclick = () => handleAction(docId, 'rejected', noteInput.value);
+          reject.onclick = () => handleAction(docId, 'rejected', noteInput.value, null);
           btnRow.appendChild(approve);
           btnRow.appendChild(reject);
           wrap.appendChild(btnRow);
@@ -442,17 +480,22 @@
       paymentsList.appendChild(pager);
     }
 
-    async function handleAction(id, action, adminNote){
+    async function handleAction(id, action, adminNote, amountApprovedUSDT){
       const actionMap = { approved: '通过', rejected: '拒绝' };
   const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
       if(!ok) return;
       paymentsStatus('提交中...');
       const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
       try{
+        const body = { id, action, adminNote: adminNote || null };
+        if(typeof amountApprovedUSDT !== 'undefined' && amountApprovedUSDT !== null && amountApprovedUSDT !== ''){
+          const n = Number(amountApprovedUSDT) || 0;
+          body.amountApprovedUSDT = n;
+        }
         const r = await fetch('/api/admin/payments', {
           method: 'PATCH',
           headers: { 'content-type': 'application/json', 'x-admin-secret': secret },
-          body: JSON.stringify({ id, action, adminNote: adminNote || null })
+          body: JSON.stringify(body)
         });
         const j = await r.json().catch(()=>({ok:false}));
         if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
