@@ -92,27 +92,105 @@ module.exports = async function(req, res){
         }
         if(!targetDoc) return jsonResponse(res, 404, { ok:false, error:'not_found' });
 
-        const payload = targetDoc.data.payload || {};
+        // normalize payload, support both single- and double-nested shapes
+        const originalPayload = targetDoc.data.payload || {};
+        const payload = Object.assign({}, originalPayload);
         if(!payload.item && payload.deposit) payload.item = payload.deposit;
         if(!payload.item) payload.item = payload;
-        payload.item.status = action;
-        if(adminNote) payload.adminNote = adminNote;
-        const updateObj = { payload, updatedAt: new Date().toISOString() };
-        await targetDoc.ref.update(updateObj);
+        if(!payload.item.item && payload.item && (payload.item.amountRequestedUSDT || payload.item.amountRequested) && (typeof payload.item.item === 'undefined')){
+          // preserve existing single-level but allow nested shape where present
+        }
 
+        // helper: pick the innermost item that contains amount fields if present
+        function resolveNested(item, root){
+          const top = item || {};
+          const inner = (top && top.item) ? top.item : null;
+          return { top, inner };
+        }
+
+        const { top: topItem } = resolveNested(payload.item, payload);
+        // set status and admin note on top level item
+        topItem.status = action;
+        if(adminNote) payload.adminNote = adminNote;
+
+        const now = new Date().toISOString();
+
+        // If approving: ensure approved amount is written back to both possible places.
         if(action === 'approved'){
           try{
-            const item = payload.item || {};
-            const username = item.username || payload.username || '';
-            const amount = Number(item.amountApprovedUSDT || item.amountApproved || item.amount || 0) || 0;
-            if(username && amount > 0){
-              const usersRef = db.collection('users');
-              const q = await usersRef.where('username','==',username).limit(1).get();
-              if(!q.empty){ const udoc = q.docs[0]; await usersRef.doc(udoc.id).update({ topupBalance: adminLib.firestore.FieldValue.increment(amount), updatedAt: new Date().toISOString() }); }
-              else { await db.collection('user_balances').doc(username).set({ username, topupBalance: amount, updatedAt: new Date().toISOString() }, { merge: true }); }
+            const top = payload.item || {};
+            const inner = (top && top.item) ? top.item : null;
+
+            // helper to read numeric fields safely
+            const readNum = (o, ...keys) => {
+              for(const k of keys){ if(o && typeof o[k] !== 'undefined' && o[k] !== null) return Number(o[k]) || 0; }
+              return 0;
+            };
+
+            const requested = readNum(inner, 'amountRequestedUSDT','amountRequested','amount') || readNum(top, 'amountRequestedUSDT','amountRequested','amount') || readNum(payload, 'amount');
+            const approvedExisting = readNum(inner, 'amountApprovedUSDT','amountApproved') || readNum(top, 'amountApprovedUSDT','amountApproved');
+            const approved = approvedExisting || 0;
+
+            if(!approved && requested > 0){
+              // write into both places if applicable to keep shapes consistent
+              if(inner) inner.amountApprovedUSDT = requested;
+              top.amountApprovedUSDT = requested;
+              // also keep canonical amount fields aligned
+              if(inner) inner.amount = requested;
+              top.amount = requested;
+              payload.amount = requested;
             }
-          }catch(e){ console.error('[admin][payments] balance update error', e && e.message); }
+          }catch(e){ console.error('[admin][payments] compute approved fallback error', e && e.message); }
         }
+
+        // Use a transaction so sync_items update and user balance increment are atomic
+        try{
+          if(action === 'approved'){
+            await db.runTransaction(async tx => {
+              // re-read current doc inside transaction
+              const snap = await tx.get(targetDoc.ref);
+              if(!snap.exists) throw new Error('doc_missing_in_tx');
+              const cur = snap.data() || {};
+              // merge our payload into current payload to avoid stomping unrelated changes
+              const mergedPayload = Object.assign({}, cur.payload || {}, payload);
+
+              // ensure nested fields are present and consistent
+              if(mergedPayload.item && mergedPayload.item.item){
+                // prefer inner approved if present; otherwise ensure both have the approved value
+                const inner = mergedPayload.item.item;
+                const top = mergedPayload.item;
+                const getNum = (o, ...keys) => { for(const k of keys) if(o && typeof o[k] !== 'undefined' && o[k] !== null) return Number(o[k])||0; return 0; };
+                const resolvedAmount = getNum(inner, 'amountApprovedUSDT','amountApproved','amount') || getNum(top, 'amountApprovedUSDT','amountApproved','amount') || getNum(mergedPayload,'amount');
+                if(resolvedAmount && (!getNum(inner,'amountApprovedUSDT','amountApproved'))){ inner.amountApprovedUSDT = resolvedAmount; inner.amount = resolvedAmount; }
+                if(resolvedAmount && (!getNum(top,'amountApprovedUSDT','amountApproved'))){ top.amountApprovedUSDT = resolvedAmount; top.amount = resolvedAmount; }
+                mergedPayload.amount = mergedPayload.amount || resolvedAmount;
+              } else if(mergedPayload.item){
+                const top = mergedPayload.item;
+                const resolvedAmount = Number(top.amountApprovedUSDT || top.amountApproved || top.amount || top.amountRequestedUSDT || top.amountRequested || mergedPayload.amount) || 0;
+                if(resolvedAmount){ top.amountApprovedUSDT = top.amountApprovedUSDT || resolvedAmount; top.amount = top.amount || resolvedAmount; mergedPayload.amount = mergedPayload.amount || resolvedAmount; }
+              }
+
+              tx.update(targetDoc.ref, { payload: mergedPayload, updatedAt: now });
+
+              // resolve username and amount for balance increment
+              const topForUser = (mergedPayload.item && mergedPayload.item.item) ? mergedPayload.item.item : mergedPayload.item || mergedPayload;
+              const username = (topForUser && (topForUser.username || mergedPayload.username)) || '';
+              const amount = Number(topForUser.amountApprovedUSDT || topForUser.amountApproved || topForUser.amount || topForUser.amountRequestedUSDT || topForUser.amountRequested || mergedPayload.amount) || 0;
+              console.log('[admin][payments] approving (tx)', { docId: targetDoc.ref.id, username, amount });
+              if(username && amount > 0){
+                const usersRef = db.collection('users');
+                const q = await tx.get(usersRef.where('username','==',username).limit(1));
+                if(!q.empty){ const udoc = q.docs[0]; tx.update(usersRef.doc(udoc.id), { topupBalance: adminLib.firestore.FieldValue.increment(amount), updatedAt: now }); }
+                else { tx.set(db.collection('user_balances').doc(username), { username, topupBalance: amount, updatedAt: now }, { merge: true }); }
+              } else {
+                console.warn('[admin][payments] no username or zero amount, skip balance update', { username, amount });
+              }
+            });
+          } else {
+            // non-approved actions: simple update
+            await targetDoc.ref.update({ payload, updatedAt: now });
+          }
+        }catch(e){ console.error('[admin][payments] transaction error', e && (e.stack || e.message)); }
 
         return jsonResponse(res, 200, { ok:true });
       }
