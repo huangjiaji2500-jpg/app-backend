@@ -130,8 +130,7 @@
     let pageSize = 8;
     let currentPage = 1;
 
-  filterSelect.value = 'all';
-    filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+  if (filterSelect) { filterSelect.value = 'all'; filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); }; }
 
     async function loadPayments() {
       paymentsStatus('鍔犺浇涓?..');

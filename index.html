@@ -92,8 +92,7 @@
       let currentPage = 1;
 
     // 默认只显示待审核项（与 admin/index.html 保持一致）
-    filterSelect.value = 'pending';
-      filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+    if (filterSelect) { filterSelect.value = 'pending'; filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); }; }
 
       async function loadPayments() {
     paymentsData = j.payments || [];

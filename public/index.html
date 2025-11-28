@@ -3,13 +3,28 @@
   <script>
   (function(){
 
+    // safe DOM helpers (idempotent)
+    window.$ = window.$ || (sel => document.querySelector(sel));
+
+    // query elements defensively — script may run before full DOM is parsed
+    const filterSelect = $('#filterSelect') || document.getElementById('filterSelect');
+    const paymentsStatus = (typeof window.paymentsStatus === 'function') ? window.paymentsStatus : (sel => { const el = document.getElementById('paymentsStatus'); if(el) el.textContent = sel; });
+
     let paymentsData = []; // raw from server
     let currentFilter = 'all';
+    let pageSize = 8;
+    let currentPage = 1;
 
     // 默认只显示待审核项（与 admin/index.html 保持一致）
-    filterSelect.value = 'pending';
-    paymentsData = j.payments || [];
-    paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
+    if (filterSelect) {
+      try { filterSelect.value = 'pending'; filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; /* renderPage will be defined later */ }; } catch(e){}
+    }
+
+    // If a JSON payload `j` exists in this scope (e.g. embedded server render), populate paymentsData defensively
+    if (typeof j !== 'undefined' && j && Array.isArray(j.payments)) {
+      paymentsData = j.payments;
+      try { paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）'); } catch(e){}
+    }
       function fmtDate(d){ try{ return new Date(d).toLocaleString(); }catch(e){ return d; } }
     // 状态映射，用于在 UI 中显示中文状态
     const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
@@ -282,8 +297,7 @@
       let currentPage = 1;
 
     // 默认只显示待审核项（与 admin/index.html 保持一致）
-    filterSelect.value = 'pending';
-      filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+    if (filterSelect) { filterSelect.value = 'pending'; filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); }; }
 
       async function loadPayments() {
         paymentsStatus('加载中...');
@@ -669,8 +683,7 @@
     let pageSize = 8;
     let currentPage = 1;
 
-  filterSelect.value = 'all';
-    filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+  if (filterSelect) { filterSelect.value = 'all'; filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); }; }
 
     async function loadPayments() {
       paymentsStatus('加载中...');
