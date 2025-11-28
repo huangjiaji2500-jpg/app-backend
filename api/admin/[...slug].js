@@ -57,8 +57,15 @@ module.exports = async function(req, res){
           snap.forEach(d => items.push(Object.assign({ _id: d.id }, d.data())));
           return jsonResponse(res, 200, { ok:true, payments: items });
         } catch(e) {
-          // fallback: if orderBy causes issues (missing field/index), try simpler query
-          console.error('[admin/payments] primary query failed', e && (e.stack || e.message));
+          const emsg = e && (e.stack || e.message) || String(e || '');
+          console.error('[admin/payments] primary query failed', emsg);
+          // If Firestore reports that a composite index is required, return a friendly response
+          const urlMatch = emsg.match(/https?:\/\/[^\s)]+/);
+          if (emsg.includes('requires an index') || (e && e.code === 9)) {
+            const indexUrl = urlMatch ? urlMatch[0] : null;
+            return jsonResponse(res, 503, { ok:false, error:'requires_index', indexUrl });
+          }
+          // fallback: try simpler query (no orderBy)
           try {
             const q2 = db.collection('sync_items').where('type','==','deposit').limit(500);
             const snap2 = await q2.get();

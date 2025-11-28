@@ -9,95 +9,97 @@
     textarea{width:100%;height:120px;font-family:monospace}
     .row{margin-bottom:12px}
     label{font-weight:600}
-    .small{font-size:12px;color:#666}
-    button{margin-right:8px}
-    table{border-collapse:collapse;width:100%}
-    th,td{border:1px solid #ddd;padding:8px;text-align:left}
-    th{background:#f5f5f5}
-  </style>
-</head>
-<body>
-  <h1>平台配置（管理员）</h1>
-  <p class="small">注意：请在会话存储（Session Storage）中设置管理员密钥（键：<code>ADMIN_PANEL_SECRET</code>）。</p>
+    <script>
+    (function(){
+      window.$ = window.$ || (sel => document.querySelector(sel));
+      window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
-  <div class="row">
-  <label>管理员密钥</label><br/>
-  <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
-    <div style="margin-top:6px">
-      <button id="saveSecret">保存到 sessionStorage</button>
-      <button id="openUsers" style="margin-left:8px">用户管理</button>
-      <button id="clearSecret">清除</button>
-    </div>
-  </div>
+      // load admin secret from sessionStorage (use safe global to avoid duplicate const)
+      window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
+      window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+      if (window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
-  <hr />
-  <h2>审核充值凭证</h2>
-  <p class="small">从服务器加载最近的充值凭证，审核通过后会为用户增加 USDT 余额。</p>
-  <div class="row">
-  <button id="loadPayments">加载充值凭证</button>
-  <label style="margin-left:12px">筛选: <select id="filterSelect"><option value="pending">仅待审核</option><option value="all">全部</option></select></label>
-    <span id="paymentsStatus" style="margin-left:12px"></span>
-    <button id="toggleRaw" style="margin-left:12px">显示原始响应</button>
-  </div>
-  <pre id="rawResponse" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;border:1px solid #eee;display:none;max-height:200px;overflow:auto;margin-top:8px"></pre>
-  <div id="paymentsList" style="margin-top:12px"></div>
+      $('#saveSecret').onclick = () => {…};
+      $('#clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
-  <div class="row">
-    <label>显示汇率</label>
-    <div id="ratesForm" style="border:1px solid #eee;padding:8px;border-radius:6px;max-width:560px">
-      <table style="width:100%">
-        <thead><tr><th>法币类型</th><th>USDT 汇率</th></tr></thead>
-        <tbody>
-          <tr><td>USD</td><td><input data-currency="USD" class="rateInput" style="width:100%" /></td></tr>
-          <tr><td>CNY</td><td><input data-currency="CNY" class="rateInput" style="width:100%" /></td></tr>
-          <tr><td>KRW</td><td><input data-currency="KRW" class="rateInput" style="width:100%" /></td></tr>
-          <tr><td>JPY</td><td><input data-currency="JPY" class="rateInput" style="width:100%" /></td></tr>
-        </tbody>
-      </table>
-      <div style="margin-top:8px">
-        <button id="saveRates">保存汇率</button>
-        <button id="previewRates" style="margin-left:8px">预览生效状态</button>
-        <span id="ratesStatus" style="margin-left:12px"></span>
-      </div>
-      <div id="ratesPreview" style="margin-top:8px;display:none;padding:8px;background:#fafafa;border:1px dashed #eee"></div>
-    </div>
-  </div>
+      // Load current platform config and populate the visual form
+      $('#load').onclick = async () => {…};
 
-  <!-- 用户管理区 -->
-  <hr />
-  <section id="usersSection">
-    <h2>用户管理</h2>
-    <p class="small">请在页面顶部粘贴管理员密钥并保存到 sessionStorage（键：<code>ADMIN_PANEL_SECRET</code>），然后点击“加载用户”。</p>
-    <div style="margin-bottom:12px">
-      <button id="loadUsers">加载用户</button>
-      <input id="q" class="search" placeholder="搜索 userId 或 displayName 或 email" style="width:240px;padding:6px;margin-left:8px" />
-    </div>
+      // Save whole config: rates + platformDeposit (includes optional syncAll flag)
+      $('#save').onclick = async () => {…};
 
-    <div id="usersStatus" class="small"></div>
-    <div style="margin-top:12px">
-      <table id="usersTable">
-        <thead>
-          <tr><th>用户ID</th><th>用户名 / 显示名</th><th>邮箱</th><th>注册时间</th><th>最近登录</th><th>设备</th><th>操作</th></tr>
-        </thead>
-        <tbody id="usersBody">
-        </tbody>
-      </table>
-    </div>
+      // Save rates button (separate quick action)
+      document.getElementById('saveRates').onclick = async () => {…};
 
-    <!-- 详情模态（隐藏） -->
-    <div id="modal" style="display:none;position:fixed;left:0;top:0;right:0;bottom:0;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;padding:20px">
-      <div id="modalContent" style="background:#fff;padding:16px;max-width:720px;margin:auto;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,0.2);">
-        <h3 id="modalTitle">用户详情</h3>
-        <pre id="modalBody" style="white-space:pre-wrap;max-height:400px;overflow:auto;background:#f7f7f7;padding:8px;border:1px solid #eee"></pre>
-        <div style="text-align:right;margin-top:8px"><button id="modalClose">关闭</button></div>
-      </div>
-    </div>
-  </section>
+      // Preview rates
+      document.getElementById('previewRates').onclick = () => {…};
 
-  <div class="row">
-    <h2>平台收款二维码管理</h2>
-    <div style="max-width:640px;border:1px solid #eee;padding:12px;border-radius:6px">
-      <div style="margin-bottom:8px"><label>收款地址</label><br/><input id="pdAddress" style="width:100%" placeholder="收款地址（例如：USDT 地址）" /></div>
+      // File upload -> convert to data URL and preview
+      document.getElementById('pdFile').addEventListener('change', function(ev){
+        reader.readAsDataURL(f);
+      });
+
+      // Onboarding modal
+      const onboardKey = 'ADMIN_ONBOARDED_V1';
+      document.getElementById('onboardClose').onclick = () => { sessionStorage.setItem(onboardKey, '1'); document.getElementById('onboardModal').style.display = 'none'; };
+      // show onboarding if first run
+      (function(){ try{ if(!sessionStorage.getItem(onboardKey)) { document.getElementById('onboardModal').style.display = 'flex'; } }catch(e){} })();
+    
+
+      // Auto-load payments & users when admin secret present on page load
+      window.addEventListener('load', () => {…}catch(e){}
+      });
+
+      // Payments review with default pending filter + client-side pagination
+      const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
+      const rawResponseEl = $('#rawResponse');
+      $('#toggleRaw').onclick = () => {…};
+      const paymentsList = $('#paymentsList');
+      const filterSelect = $('#filterSelect');
+
+    let paymentsData = []; // raw from server
+    let currentFilter = 'all';
+      let pageSize = 8;
+      let currentPage = 1;
+
+    // 默认只显示待审核项
+    filterSelect.value = 'pending';
+      filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+
+      async function loadPayments() {…}
+
+      // 如果后端不可用，尝试回退到本地模拟数据文件（仅用于本地测试）
+      async function loadLocalFallback(){…}
+
+      function fmtDate(d){ try{ return new Date(d).toLocaleString(); }catch(e){ return d; } }
+    // 状态映射，用于在 UI 中显示中文状态
+    const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
+    function statusText(s){ return statusMap[s] || s || ''; }
+
+      // robust helpers: extract display amount and proof image from heterogeneous records
+      function getAmount(rec){…}
+
+      function getProofSrc(rec){…}
+
+      function renderPage(){…}
+
+      async function handleAction(id, action, adminNote, amountApprovedUSDT){
+        const actionMap = { approved: '通过', rejected: '拒绝' };
+    const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
+        if(!ok) return;
+        paymentsStatus('提交中...');
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
+        try{
+          await loadPayments();
+        }catch(e){ paymentsStatus('操作失败: ' + e.message); }
+      }
+
+      $('#loadPayments').onclick = loadPayments;
+      // 打开用户管理区（滚动到页面内）
+      const openBtn = document.getElementById('openUsers');
+      if(openBtn) openBtn.onclick = () => { const s = document.getElementById('usersSection'); if(s) s.scrollIntoView({behavior:'smooth'}); };
+    })();
+    </script>
       <div style="margin-bottom:8px"><label>备注说明</label><br/><input id="pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
       <div style="margin-bottom:8px">
         <label>上传二维码图片（PNG/JPG）</label><br/>
@@ -139,14 +141,14 @@
 
     // load admin secret from sessionStorage (use safe global to avoid duplicate const)
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-    var adminSecretInput = (typeof adminSecretInput !== 'undefined') ? adminSecretInput : (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
-    if (adminSecretInput) adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
+    window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+    if (window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
     $('#saveSecret').onclick = () => {
-      sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, adminSecretInput && adminSecretInput.value.trim());
+      sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim());
       window.__admin_status('管理员密钥已保存到 sessionStorage');
     };
-    $('#clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(adminSecretInput) adminSecretInput.value = ''; window.__admin_status('已清除'); };
+    $('#clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
     // Load current platform config and populate the visual form
     $('#load').onclick = async () => {
@@ -176,7 +178,7 @@
 
     // Save whole config: rates + platformDeposit (includes optional syncAll flag)
     $('#save').onclick = async () => {
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
       // collect displayRates from inputs
@@ -215,7 +217,7 @@
 
     // Save rates button (separate quick action)
     document.getElementById('saveRates').onclick = async () => {
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ document.getElementById('ratesStatus').textContent = '缺少管理员密钥'; return; }
       const displayRates = {};
       document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) displayRates[k] = v; });
@@ -252,7 +254,7 @@
     // Auto-load payments & users when admin secret present on page load
     window.addEventListener('load', () => {
       try{
-        const s = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+        const s = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
         if(s){ // auto load
           setTimeout(()=>{ if(document.getElementById('loadPayments')) loadPayments(); if(document.getElementById('loadUsers')) loadUsers(); if(document.getElementById('load')) document.getElementById('load').click(); }, 400);
         }
@@ -281,7 +283,7 @@
     async function loadPayments() {
       paymentsStatus('加载中...');
       paymentsList.innerHTML = '';
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
@@ -319,6 +321,78 @@
   const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
   function statusText(s){ return statusMap[s] || s || ''; }
 
+    // robust helpers: extract display amount and proof image from heterogeneous records
+    function getAmount(rec){
+      try{
+        const payload = (rec && rec.payload) || {};
+        const item = payload.item || (payload.deposit && payload.deposit.item) || payload.deposit || payload || {};
+        const toNum = v => { const n = Number(v); return (!isNaN(n) && n > 0 && n < 1000000) ? n : null; };
+        const tryList = [
+          item && (item.amountApprovedUSDT || item.amountApproved || item.amount),
+          item && item.item && (item.item.amountApprovedUSDT || item.item.amountApproved || item.item.amount),
+          item && (item.amountRequestedUSDT || item.amountRequested),
+          rec && rec.amount, payload && payload.amount
+        ];
+        for(const c of tryList){ const n = toNum(c); if(n) return n; }
+
+        // deep-scan for amount-like keys
+        function scan(obj){
+          if(!obj || typeof obj !== 'object') return null;
+          for(const k of Object.keys(obj)){
+            try{
+              const v = obj[k]; if(v == null) continue;
+              if(typeof v === 'object'){ const r = scan(v); if(r) return r; }
+              const key = (''+k).toLowerCase();
+              if(/amount|amt|usdt|requested|approved/.test(key)){
+                const n = toNum(v); if(n) return n;
+              }
+            }catch(e){ /* ignore */ }
+          }
+          return null;
+        }
+        const s1 = scan(item) || scan(payload) || scan(rec);
+        if(s1) return s1;
+
+        // last resort: regex search in serialized JSON
+        try{
+          const s = JSON.stringify(rec||{});
+          const matches = s.match(/\b(\d{1,7}(?:\.\d+)?)\b/g);
+          if(matches && matches.length){
+            for(const m of matches){ const n = Number(m); if(n>0 && n<1000000) return n; }
+          }
+        }catch(e){}
+      }catch(e){}
+      return 0;
+    }
+
+    function getProofSrc(rec){
+      try{
+        const payload = (rec && rec.payload) || {};
+        const item = payload.item || (payload.deposit && payload.deposit.item) || payload.deposit || payload || {};
+        const candidates = [
+          rec && (rec.receiptViewUrl || rec.receiptUrl),
+          item && (item.receiptViewUrl || item.receiptUrl || item.proofImage || item.proofImageUrl),
+          item && item.item && (item.item.proofImage || item.item.proofImageUrl || item.item.receiptViewUrl || item.item.receiptUrl),
+          payload && payload.deposit && (payload.deposit.proofImage || payload.deposit.proofImageUrl || payload.deposit.receiptUrl),
+          item && item.images && item.images[0], item && item.attachments && item.attachments[0], item && item.image, item && item.screenshot
+        ];
+        for(const c of candidates){
+          if(!c) continue;
+          // arrays
+          if(Array.isArray(c) && c.length){ const first = c[0]; if(first && typeof first === 'string') return first; }
+          if(typeof c === 'string'){
+            const s = c.trim();
+            if(!s) continue;
+            if(/^data:image\//i.test(s)) return s;
+            if(/^https?:\/\//i.test(s) || /^\/\//.test(s)) return s;
+            // likely raw base64 without data: prefix
+            if(/^[A-Za-z0-9+/=]{100,}$/.test(s)) return 'data:image/jpeg;base64,' + s;
+          }
+        }
+      }catch(e){}
+      return null;
+    }
+
     function renderPage(){
       if(!paymentsData || !paymentsData.length){ paymentsList.innerHTML = '<div class="small">没有充值凭证。</div>'; return; }
       // apply filter (尊重 payload.item.status / payload.status / top-level status)
@@ -349,55 +423,10 @@
         const payload = (it && it.payload) || {};
         const item = payload.item || (payload.deposit && payload.deposit.item) || payload.deposit || payload || {};
         const username = item.username || item.user || it.username || it.uid || payload.username || '未知';
-        // Compute displayed amount with safe fallbacks (front-end only, no DB writes)
-        // First try the existing preferred fields, then fallback to scanning common amount keys.
-        function extractAmountFromObj(obj){
-          try{
-            if(!obj || typeof obj !== 'object') return null;
-            for(const k of Object.keys(obj)){
-              const v = obj[k];
-              if(v == null) continue;
-              const key = (''+k).toLowerCase();
-              if(/amount|amt|usdt|requested|approved/.test(key)){
-                const n = Number(v);
-                if(!isNaN(n) && n > 0 && n < 1000000) return n;
-              }
-              if(typeof v === 'object'){
-                const r = extractAmountFromObj(v);
-                if(r) return r;
-              }
-            }
-          }catch(e){}
-          return null;
-        }
-
-        let amount = Number(
-          (item && (item.amountApprovedUSDT || item.amountApproved || item.amount)) ||
-          ((item && item.item) && (item.item.amountApprovedUSDT || item.item.amountApproved || item.item.amount)) ||
-          (item && (item.amountRequestedUSDT || item.amountRequested)) ||
-          ((item && item.item) && (item.item.amountRequestedUSDT || item.item.amountRequested)) ||
-          it.amount || payload.amount || 0
-        ) || 0;
-
-        // If amount resolved to 0, attempt looser front-end-only fallbacks by inspecting object keys
-        if(!amount || amount === 0){
-          const a1 = extractAmountFromObj(item);
-          const a2 = extractAmountFromObj(payload);
-          let fallback = a1 || a2 || null;
-          if(!fallback){
-            try{
-              const s = JSON.stringify(it);
-              const matches = s.match(/\b(\d{1,6}(?:\.\d+)?)\b/g);
-              if(matches && matches.length){
-                for(const m of matches){
-                  const num = Number(m);
-                  if(num > 0 && num < 1000000){ fallback = num; break; }
-                }
-              }
-            }catch(e){}
-          }
-          if(fallback) amount = fallback;
-        }
+        // Compute displayed amount with robust fallback (front-end only, no DB writes)
+        const amount = getAmount(it);
+        // compute proof url early so debug lines can reference it
+        const receiptUrl = getProofSrc(it);
         const docId = it._id || it.id || (item.id || payload.id) || '-';
         const createdRaw = it.receivedAt || it.createdAt || payload.receivedAt || payload.createdAt || item.createdAt || item.ts || item.time || payload.ts || null;
         const created = createdRaw ? fmtDate(createdRaw) : '-';
@@ -440,18 +469,6 @@
         }catch(e){ /* safe ignore debug helpers on any error */ }
 
         // 充值凭证预览区域（更清晰的展示）
-        // support various legacy/modern fields: proofImage, images array, attachments, receiptUrl, etc.
-        const receiptUrl = (
-          it.receiptViewUrl || it.receiptUrl ||
-          // item-level
-          item.receiptViewUrl || item.receiptUrl || item.proofImage || item.proofImageUrl ||
-          // nested item.item
-          (item && item.item && (item.item.proofImage || item.item.proofImageUrl || item.item.receiptViewUrl || item.item.receiptUrl)) ||
-          // deposit.item fallback
-          (payload.deposit && payload.deposit.proofImage) || (payload.deposit && payload.deposit.proofImageUrl) || (payload.deposit && payload.deposit.receiptUrl) ||
-          // legacy arrays
-          (item.images && item.images[0]) || (item.attachments && item.attachments[0]) || item.image || item.screenshot || null
-        );
         const previewWrap = document.createElement('div');
         previewWrap.style.marginTop = '8px';
         const previewLabel = document.createElement('div');
@@ -609,7 +626,7 @@
   const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
       if(!ok) return;
       paymentsStatus('提交中...');
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       try{
         const body = { id, action, adminNote: adminNote || null };
         if(typeof amountApprovedUSDT !== 'undefined' && amountApprovedUSDT !== null && amountApprovedUSDT !== ''){
@@ -644,7 +661,7 @@
     async function loadUsers(){
       usersStatus('加载中...');
       if(usersBody) usersBody.innerHTML = '';
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ usersStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/users', { headers: { 'x-admin-secret': secret } });
@@ -681,7 +698,7 @@
     if(document.getElementById('modalClose')) document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
 
     async function userFetchUserDetail(id){
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ usersStatus('缺少管理员密钥'); return; }
       usersStatus('加载用户详情...');
       try{
@@ -697,7 +714,7 @@
 
     async function userToggleDisable(id, btn){
       const ok = confirm('确定要切换用户 ' + id + ' 的启用/禁用 状态吗？'); if(!ok) return;
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim()); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim()); if(!secret){ usersStatus('缺少管理员密钥'); return; }
       try{
         const r0 = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
         if(!r0.ok) throw new Error(r0.status + ' ' + r0.statusText);
@@ -712,7 +729,7 @@
 
     async function userResetPassword(id){
       const ok = confirm('确定要为用户 ' + id + ' 生成临时密码吗？该密码只会显示一次，请及时复制并转交给用户。'); if(!ok) return;
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim()); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim()); if(!secret){ usersStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, resetPassword: true }) });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);

@@ -126,7 +126,7 @@ Transfer-Encoding: chunked
     <div id="users-error" class="user-error" style="display:none"></div>
     <!-- 用户管理内容结束 -->
   </div>
-  <script>
+  <script>(function(){
     // 顶部标签切换逻辑，默认首页，切换不刷新
     const tabBtnHome = document.getElementById('tab-btn-home');
     const tabBtnUsers = document.getElementById('tab-btn-users');
@@ -212,16 +212,16 @@ Transfer-Encoding: chunked
 
     // load admin secret from sessionStorage (use safe global to avoid duplicate const)
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-    var adminSecretInput = (typeof adminSecretInput !== 'undefined') ? adminSecretInput : (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
-    if (adminSecretInput) adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
+    window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+    if (window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
     const saveBtn = $('#saveSecret');
     if (saveBtn) saveBtn.onclick = () => {
-      sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, adminSecretInput.value.trim());
+      sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput.value.trim());
       window.__admin_status('管理员密钥已保存到 sessionStorage');
     };
     const clearBtn = $('#clearSecret');
-    if (clearBtn) clearBtn.onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(adminSecretInput) adminSecretInput.value = ''; window.__admin_status('已清除'); };
+    if (clearBtn) clearBtn.onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
     const loadBtn = $('#load');
     if (loadBtn) loadBtn.onclick = async () => {
@@ -240,7 +240,7 @@ Transfer-Encoding: chunked
 
     const saveConfigBtn = $('#save');
     if (saveConfigBtn) saveConfigBtn.onclick = async () => {
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ window.__admin_status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
       let displayRates, platformDeposit;
@@ -286,7 +286,7 @@ Transfer-Encoding: chunked
     async function loadPayments() {
       paymentsStatus('加载中...');
       if(paymentsList) paymentsList.innerHTML = '';
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
@@ -408,7 +408,7 @@ Transfer-Encoding: chunked
       const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
       if(!ok) return;
       paymentsStatus('提交中...');
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       try{
         const r = await fetch('/api/admin/payments', {
           method: 'PATCH',
@@ -427,7 +427,7 @@ Transfer-Encoding: chunked
     // 打开用户管理按钮现在切换到用户标签（在合并页面内）
     const openBtn = document.getElementById('openUsers');
     if(openBtn) openBtn.onclick = () => { tabBtnUsers.click(); };
-  </script>
+  })();</script>
 </body>
 </html>
 <script async data-explicit-opt-in="true" data-deployment-id="dpl_HnFNkyejYt3wLeSfEpDUpxpZ98Y6" src="https://vercel.live/_next-live/feedback/feedback.js"></script>

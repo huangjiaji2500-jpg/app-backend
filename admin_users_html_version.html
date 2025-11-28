@@ -45,14 +45,14 @@
     </div>
   </div>
 
-  <script>
+  <script>(function(){
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-    var adminSecretInput = (typeof adminSecretInput !== 'undefined') ? adminSecretInput : (document.getElementById ? document.getElementById('adminSecret') : null);
-    if(adminSecretInput) adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
-    document.getElementById('saveSecret').onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, adminSecretInput && adminSecretInput.value.trim()); document.getElementById('status').textContent = '已保存管理员密钥到 sessionStorage'; };
+    window.adminSecretInput = window.adminSecretInput || (document.getElementById ? document.getElementById('adminSecret') : null);
+    if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
+    document.getElementById('saveSecret').onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); document.getElementById('status').textContent = '已保存管理员密钥到 sessionStorage'; };
 
     async function loadUsers(){
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ document.getElementById('status').textContent = '缂哄皯绠＄悊鍛樺瘑閽?; return; }
       document.getElementById('status').textContent = '鍔犺浇涓?..';
       try{
@@ -90,11 +90,11 @@
     document.getElementById('q').oninput = () => { /* if table loaded, filter */ const tbody = document.getElementById('usersBody'); if(tbody && tbody.childElementCount) loadUsers(); };
 
     // If adminSecret present open automatically to saved value
-    if(sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY)) adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY);
+    if(sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY)) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY);
 
     // Fetch single user detail
     async function fetchUserDetail(id){
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ document.getElementById('status').textContent = '缂哄皯绠＄悊鍛樺瘑閽?; return; }
       document.getElementById('status').textContent = '鍔犺浇鐢ㄦ埛璇︽儏...';
       try{
@@ -116,7 +116,7 @@
     async function toggleDisable(id, btn){
       const ok = confirm('纭畾瑕佸垏鎹㈢敤鎴?' + id + ' 鐨勫惎鐢?绂佺敤 鐘舵€佸悧锛?);
       if(!ok) return;
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       try{
         // read current user to know current disabled state
         const r0 = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
@@ -136,7 +136,7 @@
     async function resetPassword(id){
   const ok = confirm('纭畾瑕佷负鐢ㄦ埛 ' + id + ' 鐢熸垚涓存椂瀵嗙爜鍚楋紵璇ュ瘑鐮佸彧浼氭樉绀轰竴娆★紝璇峰強鏃跺鍒跺苟杞氦缁欑敤鎴枫€?);
   if(!ok) return;
-      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       try{
         const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, resetPassword: true }) });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
@@ -148,6 +148,7 @@
         loadUsers();
       }catch(e){ document.getElementById('status').textContent = '鎿嶄綔澶辫触: ' + e.message; }
     }
+    })();
   </script>
 </body>
 </html>
