@@ -60,16 +60,16 @@
     window.$ = window.$ || (sel => document.querySelector(sel));
     window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
-    // load admin secret from sessionStorage
-    const KEY = 'ADMIN_PANEL_SECRET';
-    const adminSecretInput = $('#adminSecret');
-    adminSecretInput.value = sessionStorage.getItem(KEY) || '';
+    // load admin secret from sessionStorage (use safe global key)
+    window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
+    var adminSecretInput = (typeof adminSecretInput !== 'undefined') ? adminSecretInput : (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+    if(adminSecretInput) adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
     $('#saveSecret').onclick = () => {
-      sessionStorage.setItem(KEY, adminSecretInput.value.trim());
-      window.__admin_status('绠＄悊鍛樺瘑閽ュ凡淇濆瓨鍒?sessionStorage');
+      sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, adminSecretInput && adminSecretInput.value.trim());
+      window.__admin_status('管理员密钥已保存到 sessionStorage');
     };
-    $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; window.__admin_status('宸叉竻闄?'); };
+    $('#clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(adminSecretInput) adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
     $('#load').onclick = async () => {
       window.__admin_status('鍔犺浇涓?..');
@@ -86,7 +86,7 @@
     };
 
     $('#save').onclick = async () => {
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       if(!secret){ status('缂哄皯绠＄悊鍛樺瘑閽ャ€傝鍏堢矘璐村苟淇濆瓨鍒?sessionStorage銆?); return; }
 
       let displayRates, platformDeposit;
@@ -136,7 +136,7 @@
     async function loadPayments() {
       paymentsStatus('鍔犺浇涓?..');
       paymentsList.innerHTML = '';
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       if(!secret){ paymentsStatus('缂哄皯绠＄悊鍛樺瘑閽?); return; }
       try{
         const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
@@ -270,7 +270,7 @@
   const ok = confirm('纭畾瑕佸皢鍑瘉 ' + id + ' 鏍囦负: ' + (actionMap[action] || action) + ' 锛?);
       if(!ok) return;
       paymentsStatus('鎻愪氦涓?..');
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       try{
         const r = await fetch('/api/admin/payments', {
           method: 'PATCH',

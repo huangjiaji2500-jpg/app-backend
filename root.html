@@ -212,7 +212,7 @@ Transfer-Encoding: chunked
 
     // load admin secret from sessionStorage (use safe global to avoid duplicate const)
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-    const adminSecretInput = $('#adminSecret');
+    var adminSecretInput = (typeof adminSecretInput !== 'undefined') ? adminSecretInput : (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
     if (adminSecretInput) adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
     const saveBtn = $('#saveSecret');
@@ -240,7 +240,7 @@ Transfer-Encoding: chunked
 
     const saveConfigBtn = $('#save');
     if (saveConfigBtn) saveConfigBtn.onclick = async () => {
-      const secret = sessionStorage.getItem(KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       if(!secret){ window.__admin_status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
       let displayRates, platformDeposit;
@@ -286,7 +286,7 @@ Transfer-Encoding: chunked
     async function loadPayments() {
       paymentsStatus('加载中...');
       if(paymentsList) paymentsList.innerHTML = '';
-      const secret = sessionStorage.getItem(KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
@@ -408,7 +408,7 @@ Transfer-Encoding: chunked
       const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
       if(!ok) return;
       paymentsStatus('提交中...');
-      const secret = sessionStorage.getItem(KEY) || (adminSecretInput && adminSecretInput.value.trim());
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       try{
         const r = await fetch('/api/admin/payments', {
           method: 'PATCH',

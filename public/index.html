@@ -141,10 +141,11 @@
       window.$ = window.$ || (sel => document.querySelector(sel));
       window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
+
       // load admin secret from sessionStorage (use a safe global key to avoid redeclaration)
       window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-      const adminSecretInput = $('#adminSecret');
-      adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
+      var adminSecretInput = (typeof adminSecretInput !== 'undefined') ? adminSecretInput : (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+      if(adminSecretInput) adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
       $('#saveSecret').onclick = () => {
         sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, adminSecretInput.value.trim());
@@ -180,7 +181,7 @@
 
       // Save whole config: rates + platformDeposit (includes optional syncAll flag)
       $('#save').onclick = async () => {
-        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
         if(!secret){ window.__admin_status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
         // collect displayRates from inputs
@@ -219,7 +220,7 @@
 
       // Save rates button (separate quick action)
       document.getElementById('saveRates').onclick = async () => {
-        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
         if(!secret){ document.getElementById('ratesStatus').textContent = '缺少管理员密钥'; return; }
         const displayRates = {};
         document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) displayRates[k] = v; });
@@ -256,7 +257,7 @@
       // Auto-load payments & users when admin secret present on page load
       window.addEventListener('load', () => {
         try{
-          const s = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+          const s = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
           if(s){ // auto load
             setTimeout(()=>{ if(document.getElementById('loadPayments')) loadPayments(); if(document.getElementById('loadUsers')) loadUsers(); if(document.getElementById('load')) document.getElementById('load').click(); }, 400);
           }
@@ -285,7 +286,7 @@
       async function loadPayments() {
         paymentsStatus('加载中...');
         paymentsList.innerHTML = '';
-        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
         if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
         try{
           const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
@@ -451,7 +452,7 @@
     const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
         if(!ok) return;
         paymentsStatus('提交中...');
-        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
         try{
           const r = await fetch('/api/admin/payments', {
             method: 'PATCH',
@@ -481,7 +482,7 @@
       async function loadUsers(){
         usersStatus('加载中...');
         if(usersBody) usersBody.innerHTML = '';
-        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
         if(!secret){ usersStatus('缺少管理员密钥'); return; }
         try{
           const r = await fetch('/api/admin/users', { headers: { 'x-admin-secret': secret } });
@@ -518,7 +519,7 @@
       if(document.getElementById('modalClose')) document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
 
       async function userFetchUserDetail(id){
-        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
         if(!secret){ usersStatus('缺少管理员密钥'); return; }
         usersStatus('加载用户详情...');
         try{
@@ -534,7 +535,7 @@
 
       async function userToggleDisable(id, btn){
         const ok = confirm('确定要切换用户 ' + id + ' 的启用/禁用 状态吗？'); if(!ok) return;
-        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim(); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim()); if(!secret){ usersStatus('缺少管理员密钥'); return; }
         try{
           const r0 = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
           if(!r0.ok) throw new Error(r0.status + ' ' + r0.statusText);
@@ -549,7 +550,7 @@
 
       async function userResetPassword(id){
         const ok = confirm('确定要为用户 ' + id + ' 生成临时密码吗？该密码只会显示一次，请及时复制并转交给用户。'); if(!ok) return;
-        const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim(); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim()); if(!secret){ usersStatus('缺少管理员密钥'); return; }
         try{
           const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, resetPassword: true }) });
           if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
@@ -598,8 +599,8 @@
 
     // load admin secret from sessionStorage (use a safe global key to avoid redeclaration)
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-    const adminSecretInput = $('#adminSecret');
-    adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
+    var adminSecretInput = (typeof adminSecretInput !== 'undefined') ? adminSecretInput : (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+    if(adminSecretInput) adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
     $('#saveSecret').onclick = () => {
       sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, adminSecretInput.value.trim());
@@ -622,7 +623,7 @@
     };
 
     $('#save').onclick = async () => {
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
       let displayRates, platformDeposit;
@@ -672,7 +673,7 @@
     async function loadPayments() {
       paymentsStatus('加载中...');
       paymentsList.innerHTML = '';
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
@@ -807,7 +808,7 @@
   const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
       if(!ok) return;
       paymentsStatus('提交中...');
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       try{
         const r = await fetch('/api/admin/payments', {
           method: 'PATCH',
@@ -836,7 +837,7 @@
     async function loadUsers(){
       usersStatus('加载中...');
       if(usersBody) usersBody.innerHTML = '';
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       if(!secret){ usersStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/users', { headers: { 'x-admin-secret': secret } });
@@ -872,8 +873,8 @@
     // modal handlers
     if(document.getElementById('modalClose')) document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
 
-    async function userFetchUserDetail(id){
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
+      async function userFetchUserDetail(id){
+        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim());
       if(!secret){ usersStatus('缺少管理员密钥'); return; }
       usersStatus('加载用户详情...');
       try{
@@ -889,7 +890,7 @@
 
     async function userToggleDisable(id, btn){
       const ok = confirm('确定要切换用户 ' + id + ' 的启用/禁用 状态吗？'); if(!ok) return;
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim(); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim()); if(!secret){ usersStatus('缺少管理员密钥'); return; }
       try{
         const r0 = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
         if(!r0.ok) throw new Error(r0.status + ' ' + r0.statusText);
@@ -904,7 +905,7 @@
 
     async function userResetPassword(id){
       const ok = confirm('确定要为用户 ' + id + ' 生成临时密码吗？该密码只会显示一次，请及时复制并转交给用户。'); if(!ok) return;
-      const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim(); if(!secret){ usersStatus('缺少管理员密钥'); return; }
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (adminSecretInput && adminSecretInput.value.trim()); if(!secret){ usersStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'x-admin-secret': secret, 'content-type': 'application/json' }, body: JSON.stringify({ id: id, resetPassword: true }) });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
