@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import PrimaryButton from '../components/ui/PrimaryButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getAssetSnapshot, getWalletAddressInfo } from '../services/assets';
+import { getAssetSnapshot, getWalletAddressInfo, setUserBalance } from '../services/assets';
+import api from '../services/api';
 import { logout, getCurrentUsername, isCurrentUserAdmin, promoteCurrentUserToAdmin, anyAdminExists } from '../services/auth';
 import { useI18n } from '../context/I18nContext';
 
@@ -37,12 +38,29 @@ export default function PersonalCenter({ navigation }) {
   const [hasAdmin, setHasAdmin] = useState(true);
   const [promoteError, setPromoteError] = useState('');
   const [grid, setGrid] = useState(buildGrid(t, false));
+  const [meDebug, setMeDebug] = useState(null);
 
   const load = async () => {
-    const snap = await getAssetSnapshot();
-    setSnapshot(snap);
+    // 尝试从后端拉取最新的 topupBalance 并写入本地存储，保证 getAssetSnapshot() 能读取到最新充值
     const u = await getCurrentUsername();
     setUsername(u || '未登录');
+    if (u) {
+      try {
+        const meResp = await api.get('/users/me');
+        const topup = meResp?.data?.user?.topupBalance;
+        if (typeof topup !== 'undefined' && topup !== null) {
+          // 更新本地 AsyncStorage 中的 USER_BALANCE_<username>
+          await setUserBalance(u, Number(topup) || 0);
+        }
+        // store debug info for troubleshooting when app still shows 0 after restart
+        try { setMeDebug({ baseURL: api.defaults?.baseURL, serverUser: meResp?.data?.user || null }); } catch(e){}
+      } catch (e) {
+        // 忽略网络或鉴权错误，继续使用本地快照
+        try { setMeDebug({ baseURL: api.defaults?.baseURL, error: e && (e.message || String(e)) }); } catch(err){}
+      }
+    }
+    const snap = await getAssetSnapshot();
+    setSnapshot(snap);
     setIsAdmin(await isCurrentUserAdmin());
     setHasAdmin(await anyAdminExists());
   };
@@ -106,6 +124,10 @@ export default function PersonalCenter({ navigation }) {
         </View>
         <Text style={{ marginTop:8, fontSize:12, color:'#757575' }}>{t('address_status')}：{snapshot.walletStatus === 'approved' ? t('address_status_passed') : snapshot.walletStatus === 'pending_review' ? t('address_status_pending') : t('address_not_submitted')}</Text>
         <Text style={{ marginTop:2, fontSize:12, color:'#757575' }}>{t('current_user')}：{username}</Text>
+        {/* Debug info: server-side returned topupBalance and current API baseURL */}
+        {meDebug ? (
+          <Text style={{ marginTop:2, fontSize:12, color:'#9E9E9E' }}>server topup: {meDebug.serverUser ? String(meDebug.serverUser.topupBalance) : '-'}  ·  api: {meDebug.baseURL || 'unknown'}</Text>
+        ) : null}
       </View>
 
       {/* 功能入口网格 */}

@@ -138,8 +138,8 @@
     </div>
 
     <script>
-      const $ = sel => document.querySelector(sel);
-      const status = txt => { $('#status').textContent = txt; };
+      window.$ = window.$ || (sel => document.querySelector(sel));
+      window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
       // load admin secret from sessionStorage
       const KEY = 'ADMIN_PANEL_SECRET';
@@ -148,13 +148,13 @@
 
       $('#saveSecret').onclick = () => {
         sessionStorage.setItem(KEY, adminSecretInput.value.trim());
-        status('管理员密钥已保存到 sessionStorage');
+        window.__admin_status('管理员密钥已保存到 sessionStorage');
       };
-      $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; status('已清除'); };
+      $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
       // Load current platform config and populate the visual form
       $('#load').onclick = async () => {
-        status('加载中...');
+        window.__admin_status('加载中...');
         try {
           const r = await fetch('/api/public/platform-config');
           if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
@@ -172,16 +172,16 @@
             if(pd.qrImage){ $('#pdPreview').src = pd.qrImage; $('#pdPreviewWrap').style.display = 'block'; }
             else { $('#pdPreview').src = ''; $('#pdPreviewWrap').style.display = 'none'; }
           }catch(e){ }
-          status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
+          window.__admin_status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
         } catch(e){
-          status('加载失败: ' + e.message);
+          window.__admin_status('加载失败: ' + e.message);
         }
       };
 
       // Save whole config: rates + platformDeposit (includes optional syncAll flag)
       $('#save').onclick = async () => {
         const secret = sessionStorage.getItem(KEY) || adminSecretInput.value.trim();
-        if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
+        if(!secret){ window.__admin_status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
         // collect displayRates from inputs
         const displayRates = {};
@@ -199,7 +199,7 @@
 
         const syncAll = !!$('#pdSyncAll').checked;
 
-        status('保存中...');
+        window.__admin_status('保存中...');
         try{
           const r = await fetch('/api/admin/set-platform-config', {
             method: 'POST',
@@ -211,9 +211,9 @@
           });
           const j = await r.json().catch(()=>({ok:false}));
           if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
-          status('保存成功');
+          window.__admin_status('保存成功');
         }catch(e){
-          status('保存失败: ' + e.message);
+          window.__admin_status('保存失败: ' + e.message);
         }
       };
 

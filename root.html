@@ -207,8 +207,8 @@ Transfer-Encoding: chunked
       usersFetchList(document.getElementById('users-search-input').value);
     });
     // 页面加载时初始化首页（来自原 `index.html` 的脚本，已做小调整以在合并页面中切换标签）
-    const $ = sel => document.querySelector(sel);
-    const status = txt => { $('#status').textContent = txt; };
+    window.$ = window.$ || (sel => document.querySelector(sel));
+    window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
     // load admin secret from sessionStorage
     const KEY = 'ADMIN_PANEL_SECRET';
@@ -218,36 +218,36 @@ Transfer-Encoding: chunked
     const saveBtn = $('#saveSecret');
     if (saveBtn) saveBtn.onclick = () => {
       sessionStorage.setItem(KEY, adminSecretInput.value.trim());
-      status('管理员密钥已保存到 sessionStorage');
+      window.__admin_status('管理员密钥已保存到 sessionStorage');
     };
     const clearBtn = $('#clearSecret');
-    if (clearBtn) clearBtn.onclick = () => { sessionStorage.removeItem(KEY); if(adminSecretInput) adminSecretInput.value = ''; status('已清除'); };
+    if (clearBtn) clearBtn.onclick = () => { sessionStorage.removeItem(KEY); if(adminSecretInput) adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
     const loadBtn = $('#load');
     if (loadBtn) loadBtn.onclick = async () => {
-      status('加载中...');
+      window.__admin_status('加载中...');
       try {
         const r = await fetch('/api/public/platform-config');
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
         if(j.displayRates && $('#displayRates')) $('#displayRates').value = JSON.stringify(j.displayRates, null, 2);
         if(j.platformDeposit && $('#platformDeposit')) $('#platformDeposit').value = JSON.stringify(j.platformDeposit, null, 2);
-        status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
+        window.__admin_status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
       } catch(e){
-        status('加载失败: ' + e.message);
+        window.__admin_status('加载失败: ' + e.message);
       }
     };
 
     const saveConfigBtn = $('#save');
     if (saveConfigBtn) saveConfigBtn.onclick = async () => {
       const secret = sessionStorage.getItem(KEY) || (adminSecretInput && adminSecretInput.value.trim());
-      if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
+      if(!secret){ window.__admin_status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
       let displayRates, platformDeposit;
       try{ if($('#displayRates')) displayRates = JSON.parse($('#displayRates').value || '{}'); }catch(e){ status('displayRates JSON 解析失败: ' + e.message); return; }
       try{ if($('#platformDeposit')) platformDeposit = JSON.parse($('#platformDeposit').value || '{}'); }catch(e){ status('platformDeposit JSON 解析失败: ' + e.message); return; }
 
-      status('保存中...');
+      window.__admin_status('保存中...');
       try{
         const r = await fetch('/api/admin/set-platform-config', {
           method: 'POST',
@@ -259,9 +259,9 @@ Transfer-Encoding: chunked
         });
         const j = await r.json().catch(()=>({ok:false}));
         if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
-        status('保存成功');
+        window.__admin_status('保存成功');
       }catch(e){
-        status('保存失败: ' + e.message);
+        window.__admin_status('保存失败: ' + e.message);
       }
     };
 

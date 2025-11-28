@@ -57,8 +57,8 @@
   
 
   <script>
-    const $ = sel => document.querySelector(sel);
-    const status = txt => { $('#status').textContent = txt; };
+    window.$ = window.$ || (sel => document.querySelector(sel));
+    window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
     // load admin secret from sessionStorage
     const KEY = 'ADMIN_PANEL_SECRET';
@@ -67,21 +67,21 @@
 
     $('#saveSecret').onclick = () => {
       sessionStorage.setItem(KEY, adminSecretInput.value.trim());
-      status('绠＄悊鍛樺瘑閽ュ凡淇濆瓨鍒?sessionStorage');
+      window.__admin_status('绠＄悊鍛樺瘑閽ュ凡淇濆瓨鍒?sessionStorage');
     };
-    $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; status('宸叉竻闄?); };
+    $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; window.__admin_status('宸叉竻闄?'); };
 
     $('#load').onclick = async () => {
-      status('鍔犺浇涓?..');
+      window.__admin_status('鍔犺浇涓?..');
       try {
         const r = await fetch('/api/public/platform-config');
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
         if(j.displayRates) $('#displayRates').value = JSON.stringify(j.displayRates, null, 2);
         if(j.platformDeposit) $('#platformDeposit').value = JSON.stringify(j.platformDeposit, null, 2);
-        status('宸插姞杞芥渶鏂伴厤缃紙鏉ヨ嚜: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
+        window.__admin_status('宸插姞杞芥渶鏂伴厤缃紙鏉ヨ嚜: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
       } catch(e){
-        status('鍔犺浇澶辫触: ' + e.message);
+        window.__admin_status('鍔犺浇澶辫触: ' + e.message);
       }
     };
 
@@ -97,7 +97,7 @@
         platformDeposit = JSON.parse($('#platformDeposit').value || '{}');
       }catch(e){ status('platformDeposit JSON 瑙ｆ瀽澶辫触: ' + e.message); return; }
 
-      status('淇濆瓨涓?..');
+      window.__admin_status('淇濆瓨涓?..');
       try{
         const r = await fetch('/api/admin/set-platform-config', {
           method: 'POST',
@@ -109,9 +109,9 @@
         });
         const j = await r.json().catch(()=>({ok:false}));
         if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
-        status('淇濆瓨鎴愬姛');
+        window.__admin_status('淇濆瓨鎴愬姛');
       }catch(e){
-        status('淇濆瓨澶辫触: ' + e.message);
+        window.__admin_status('淇濆瓨澶辫触: ' + e.message);
       }
     };
 

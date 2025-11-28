@@ -1,0 +1,27 @@
+{
+  "id": "cs8weR56eMH4S4AiCJMh",
+  "data": {
+    "type": "deposit",
+    "data": {
+      "action": "test",
+      "ts": 1763731376283,
+      "item": {
+        "username": "Administrator",
+        "amountApprovedUSDT": 5,
+        "status": "pending"
+      }
+    },
+    "ts": 1763731376283,
+    "receivedAt": 1763731376283,
+    "payload": {
+      "action": "test",
+      "ts": 1763731376283,
+      "item": {
+        "username": "Administrator",
+        "amountApprovedUSDT": 5,
+        "status": "rejected"
+      }
+    },
+    "updatedAt": "2025-11-26T06:17:57.129Z"
+  }
+}

@@ -134,19 +134,19 @@
   
 
   <script>
-    const $ = sel => document.querySelector(sel);
-    const status = txt => { $('#status').textContent = txt; };
+    window.$ = window.$ || (sel => document.querySelector(sel));
+    window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
     // load admin secret from sessionStorage
     const KEY = 'ADMIN_PANEL_SECRET';
     const adminSecretInput = $('#adminSecret');
-    adminSecretInput.value = sessionStorage.getItem(KEY) || '';
+      adminSecretInput.value = sessionStorage.getItem(KEY) || '';
 
     $('#saveSecret').onclick = () => {
       sessionStorage.setItem(KEY, adminSecretInput.value.trim());
-      status('管理员密钥已保存到 sessionStorage');
+      window.__admin_status('管理员密钥已保存到 sessionStorage');
     };
-    $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; status('已清除'); };
+    $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
     // Load current platform config and populate the visual form
     $('#load').onclick = async () => {
@@ -285,14 +285,33 @@
       if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
-        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        if(!r.ok){
+          // remote error - fallback to local sample for immediate UI testing
+          paymentsStatus('远端加载失败: ' + r.status + ' ' + r.statusText + '，使用本地模拟数据');
+          await loadLocalFallback();
+          return;
+        }
         const j = await r.json();
-  paymentsData = j.payments || [];
-  paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
+        paymentsData = j.payments || [];
+        paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
         try{ rawResponseEl.textContent = JSON.stringify(j, null, 2); }catch(e){ /* ignore */ }
         currentPage = 1;
         renderPage();
       }catch(e){ paymentsStatus('加载失败: ' + e.message); }
+    }
+
+    // 如果后端不可用，尝试回退到本地模拟数据文件（仅用于本地测试）
+    async function loadLocalFallback(){
+      try{
+        const r = await fetch('./payments-sample.json');
+        if(!r.ok) throw new Error('local file not found');
+        const j = await r.json();
+        // 支持两种格式：{ payments: [...] } 或 直接是数组
+        paymentsData = j.payments || j || [];
+        paymentsStatus('已加载本地模拟数据（仅本地测试）');
+        try{ rawResponseEl.textContent = JSON.stringify(paymentsData, null, 2); }catch(e){}
+        currentPage = 1; renderPage();
+      }catch(e){ paymentsStatus('本地模拟数据加载失败: ' + e.message); }
     }
 
     function fmtDate(d){ try{ return new Date(d).toLocaleString(); }catch(e){ return d; } }
@@ -330,14 +349,55 @@
         const payload = (it && it.payload) || {};
         const item = payload.item || (payload.deposit && payload.deposit.item) || payload.deposit || payload || {};
         const username = item.username || item.user || it.username || it.uid || payload.username || '未知';
-        const amount = Number(
-          // prefer approved -> amount -> requested; check nested item.item as well
+        // Compute displayed amount with safe fallbacks (front-end only, no DB writes)
+        // First try the existing preferred fields, then fallback to scanning common amount keys.
+        function extractAmountFromObj(obj){
+          try{
+            if(!obj || typeof obj !== 'object') return null;
+            for(const k of Object.keys(obj)){
+              const v = obj[k];
+              if(v == null) continue;
+              const key = (''+k).toLowerCase();
+              if(/amount|amt|usdt|requested|approved/.test(key)){
+                const n = Number(v);
+                if(!isNaN(n) && n > 0 && n < 1000000) return n;
+              }
+              if(typeof v === 'object'){
+                const r = extractAmountFromObj(v);
+                if(r) return r;
+              }
+            }
+          }catch(e){}
+          return null;
+        }
+
+        let amount = Number(
           (item && (item.amountApprovedUSDT || item.amountApproved || item.amount)) ||
           ((item && item.item) && (item.item.amountApprovedUSDT || item.item.amountApproved || item.item.amount)) ||
           (item && (item.amountRequestedUSDT || item.amountRequested)) ||
           ((item && item.item) && (item.item.amountRequestedUSDT || item.item.amountRequested)) ||
           it.amount || payload.amount || 0
         ) || 0;
+
+        // If amount resolved to 0, attempt looser front-end-only fallbacks by inspecting object keys
+        if(!amount || amount === 0){
+          const a1 = extractAmountFromObj(item);
+          const a2 = extractAmountFromObj(payload);
+          let fallback = a1 || a2 || null;
+          if(!fallback){
+            try{
+              const s = JSON.stringify(it);
+              const matches = s.match(/\b(\d{1,6}(?:\.\d+)?)\b/g);
+              if(matches && matches.length){
+                for(const m of matches){
+                  const num = Number(m);
+                  if(num > 0 && num < 1000000){ fallback = num; break; }
+                }
+              }
+            }catch(e){}
+          }
+          if(fallback) amount = fallback;
+        }
         const docId = it._id || it.id || (item.id || payload.id) || '-';
         const createdRaw = it.receivedAt || it.createdAt || payload.receivedAt || payload.createdAt || item.createdAt || item.ts || item.time || payload.ts || null;
         const created = createdRaw ? fmtDate(createdRaw) : '-';
@@ -351,6 +411,33 @@
         meta.textContent = `记录ID: ${docId}  状态: ${statusText(it.status || (item.status || payload.status) || 'pending')}`;
         wrap.appendChild(title);
         wrap.appendChild(meta);
+
+        // --- Debug: add "查看原始" 按钮 和 简要调试字段，帮助定位为何金额为 0 ---
+        try{
+          const viewRawBtn = document.createElement('button');
+          viewRawBtn.textContent = '查看原始';
+          viewRawBtn.style.marginLeft = '8px';
+          viewRawBtn.onclick = () => {
+            try{
+              document.getElementById('modalTitle').textContent = '凭证原始 - ' + docId;
+              document.getElementById('modalBody').textContent = JSON.stringify(it, null, 2);
+              document.getElementById('modal').style.display = 'flex';
+            }catch(e){ alert('无法展示原始数据: ' + e.message); }
+          };
+          meta.appendChild(viewRawBtn);
+
+          const debugDiv = document.createElement('div');
+          debugDiv.className = 'small';
+          debugDiv.style.marginTop = '6px';
+          // show multiple candidate fields so admin can see which path is empty
+          const debugText = 'debug: payload.amount=' + (payload && (payload.amount || ''))
+            + '  payload.status=' + (payload && payload.status || '')
+            + '  item.amountRequestedUSDT=' + (item && (item.amountRequestedUSDT || ''))
+            + '  item.amountApprovedUSDT=' + (item && (item.amountApprovedUSDT || ''))
+            + '  receipt=' + (receiptUrl ? 'present' : 'missing');
+          debugDiv.textContent = debugText;
+          wrap.appendChild(debugDiv);
+        }catch(e){ /* safe ignore debug helpers on any error */ }
 
         // 充值凭证预览区域（更清晰的展示）
         // support various legacy/modern fields: proofImage, images array, attachments, receiptUrl, etc.
@@ -454,6 +541,43 @@
           const noteText = adminNoteText ? (' 备注：' + adminNoteText) : '';
           info.textContent = '已审核：' + statusText(statusVal) + noteText;
           wrap.appendChild(info);
+
+          // 如果已经审批通过，显示“删除”按钮（仅前端页面级删除）
+          try{
+            // 只在明确为通过状态时展示删除按钮
+            if((statusVal || '').toString().toLowerCase() === 'approved' || (statusVal || '').toString().toLowerCase() === '已通过'){
+              const delBtn = document.createElement('button');
+              delBtn.textContent = '删除';
+              delBtn.style.marginLeft = '8px';
+              delBtn.onclick = () => {
+                const ok = confirm('确定删除该已审批记录吗？');
+                if(!ok) return;
+                // 前端从内存 paymentsData 中移除该记录并刷新页面（不写入服务器）
+                try{
+                  const matchId = docId;
+                  if(!matchId || matchId === '-'){
+                    // 如果没有可用 id，则通过序列化比较进行删除尝试
+                    const before = paymentsData.length;
+                    paymentsData = paymentsData.filter(p => JSON.stringify(p) !== JSON.stringify(it));
+                    const after = paymentsData.length;
+                    renderPage();
+                    paymentsStatus('已从页面移除记录（仅前端）');
+                    return;
+                  }
+                  const idx = paymentsData.findIndex(p => {
+                    const pid = (p && (p._id || p.id)) || (p && p.payload && (p.payload.id || p.payload._id)) || '';
+                    return pid && pid.toString() === matchId.toString();
+                  });
+                  if(idx >= 0){ paymentsData.splice(idx, 1); renderPage(); paymentsStatus('已从页面移除记录（仅前端）'); }
+                  else { // fallback: remove any item whose serialized content equals
+                    paymentsData = paymentsData.filter(p => JSON.stringify(p) !== JSON.stringify(it));
+                    renderPage(); paymentsStatus('已从页面移除记录（仅前端）');
+                  }
+                }catch(e){ alert('删除失败: ' + e.message); }
+              };
+              wrap.appendChild(delBtn);
+            }
+          }catch(e){ /* ignore deletion UI errors */ }
         }
         paymentsList.appendChild(wrap);
       });

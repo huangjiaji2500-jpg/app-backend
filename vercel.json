@@ -1,7 +1,13 @@
 {
+  "version": 2,
   "functions": {
     "api/**/*": {
       "runtime": "@vercel/node@2.0.0"
     }
-  }
+  },
+  
+  "routes": [
+    { "src": "^/$", "dest": "/admin/index.html" },
+    { "src": "^/(.*)$", "dest": "/admin/$1" }
+  ]
 }

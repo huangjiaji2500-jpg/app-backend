@@ -1,0 +1,30 @@
+{
+  "id": "awMiuhxuvLN3oqGoQIEr",
+  "data": {
+    "type": "deposit",
+    "data": {
+      "action": "test",
+      "ts": 1763731025946,
+      "item": {
+        "username": "Administrator",
+        "amountApprovedUSDT": 5,
+        "status": "pending"
+      }
+    },
+    "ts": 1763731025946,
+    "receivedAt": 1763731025946,
+    "payload": {
+      "action": "test",
+      "ts": 1763731025946,
+      "amount": 0,
+      "item": {
+        "username": "Administrator",
+        "amountApprovedUSDT": 5,
+        "status": "rejected",
+        "amount": 0,
+        "amountRequestedUSDT": 0
+      }
+    },
+    "updatedAt": "2025-11-27T13:12:55.473Z"
+  }
+}

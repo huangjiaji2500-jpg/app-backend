@@ -1,0 +1,31 @@
+{
+  "id": "7Tvvs6MotjIh79APIm5X",
+  "data": {
+    "type": "deposit",
+    "data": {
+      "action": "test",
+      "ts": 1763712966142,
+      "item": {
+        "username": "testuser_local",
+        "amountRequestedUSDT": 1,
+        "status": "pending"
+      }
+    },
+    "ts": 1763712966142,
+    "receivedAt": 1763713006212,
+    "payload": {
+      "action": "test",
+      "ts": 1763712966142,
+      "item": {
+        "username": "testuser_local",
+        "amountRequestedUSDT": 1,
+        "status": "approved",
+        "amountApprovedUSDT": 2,
+        "amount": 2
+      },
+      "adminNote": "auto-approve-test",
+      "amount": 2
+    },
+    "updatedAt": "2025-11-27T13:12:46.448Z"
+  }
+}

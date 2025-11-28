@@ -1,0 +1,18 @@
+{
+  "payments": [
+    {
+      "_id": "sample-approved-1",
+      "status": "approved",
+      "payload": { "adminNote": "已审核样例", "amount": 200 },
+      "receivedAt": "2025-11-28T08:00:00Z",
+      "receiptViewUrl": null
+    },
+    {
+      "_id": "sample-pending-1",
+      "status": "pending",
+      "payload": { "item": { "username": "testuser", "amountRequestedUSDT": 50, "status": "pending" } },
+      "receivedAt": "2025-11-28T09:00:00Z",
+      "receiptViewUrl": null
+    }
+  ]
+}

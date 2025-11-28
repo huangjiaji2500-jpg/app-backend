@@ -1,0 +1,25 @@
+{
+  "id": "uepmSCqeE1mfZt4qHii3",
+  "data": {
+    "type": "platform-deposit",
+    "data": {
+      "address": "TYfGGw8W2YPX3edLwQL5sMBBA57TuntQwu",
+      "qrImage": "",
+      "note": "仅接收 USDT(TRC20)",
+      "updatedAt": 1763737611990
+    },
+    "ts": 1763737611990,
+    "receivedAt": 1763737611990,
+    "payload": {
+      "platformDeposit": {
+        "address": "TYfGGw8W2YPX3edLwQL5sMBBA57TuntQwu",
+        "qrImage": "",
+        "note": "仅接收 USDT(TRC20)",
+        "updatedAt": 1763737611990
+      },
+      "ts": 1763737611990,
+      "amount": 0
+    },
+    "updatedAt": "2025-11-27T13:13:06.282Z"
+  }
+}
