@@ -137,10 +137,10 @@
     window.$ = window.$ || (sel => document.querySelector(sel));
     window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
-    // load admin secret from sessionStorage
-    const KEY = 'ADMIN_PANEL_SECRET';
+    // load admin secret from sessionStorage (use safe global to avoid duplicate const)
+    window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
     const adminSecretInput = $('#adminSecret');
-      adminSecretInput.value = sessionStorage.getItem(KEY) || '';
+      adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
     $('#saveSecret').onclick = () => {
       sessionStorage.setItem(KEY, adminSecretInput.value.trim());

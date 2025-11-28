@@ -210,18 +210,18 @@ Transfer-Encoding: chunked
     window.$ = window.$ || (sel => document.querySelector(sel));
     window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
-    // load admin secret from sessionStorage
-    const KEY = 'ADMIN_PANEL_SECRET';
+    // load admin secret from sessionStorage (use safe global to avoid duplicate const)
+    window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
     const adminSecretInput = $('#adminSecret');
-    if (adminSecretInput) adminSecretInput.value = sessionStorage.getItem(KEY) || '';
+    if (adminSecretInput) adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
     const saveBtn = $('#saveSecret');
     if (saveBtn) saveBtn.onclick = () => {
-      sessionStorage.setItem(KEY, adminSecretInput.value.trim());
+      sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, adminSecretInput.value.trim());
       window.__admin_status('管理员密钥已保存到 sessionStorage');
     };
     const clearBtn = $('#clearSecret');
-    if (clearBtn) clearBtn.onclick = () => { sessionStorage.removeItem(KEY); if(adminSecretInput) adminSecretInput.value = ''; window.__admin_status('已清除'); };
+    if (clearBtn) clearBtn.onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(adminSecretInput) adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
     const loadBtn = $('#load');
     if (loadBtn) loadBtn.onclick = async () => {

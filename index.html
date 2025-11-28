@@ -141,16 +141,16 @@
       window.$ = window.$ || (sel => document.querySelector(sel));
       window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
 
-      // load admin secret from sessionStorage
-      const KEY = 'ADMIN_PANEL_SECRET';
+      // load admin secret from sessionStorage (use safe global)
+      window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
       const adminSecretInput = $('#adminSecret');
-      adminSecretInput.value = sessionStorage.getItem(KEY) || '';
+      adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
       $('#saveSecret').onclick = () => {
-        sessionStorage.setItem(KEY, adminSecretInput.value.trim());
+        sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, adminSecretInput.value.trim());
         window.__admin_status('管理员密钥已保存到 sessionStorage');
       };
-      $('#clearSecret').onclick = () => { sessionStorage.removeItem(KEY); adminSecretInput.value = ''; window.__admin_status('已清除'); };
+      $('#clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
       // Load current platform config and populate the visual form
       $('#load').onclick = async () => {
