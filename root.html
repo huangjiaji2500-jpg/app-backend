@@ -311,6 +311,34 @@ Transfer-Encoding: chunked
     const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
     function statusText(s){ return statusMap[s] || s || ''; }
 
+    // Robust helpers to extract id and amount from heterogeneous payloads
+    function getRecordId(rec){
+      if(!rec) return undefined;
+      return rec.id || rec._id || (rec.item && (rec.item.id || rec.item._id)) || (rec.data && (rec.data.id || rec.data._id)) || rec.txid || undefined;
+    }
+
+    function getAmount(rec){
+      if(!rec) return 0;
+      // common places where amount may appear in historical payloads
+      const candidates = [
+        rec.amount,
+        rec.amountApprovedUSDT,
+        rec.amountRequestedUSDT,
+        (rec.item && (rec.item.amount || rec.item.amountRequestedUSDT || rec.item.amountApprovedUSDT)),
+        (rec.data && (rec.data.amount || rec.data.amountRequestedUSDT || rec.data.amountApprovedUSDT)),
+      ];
+      for(const c of candidates){
+        if(c !== undefined && c !== null && c !== ''){
+          const n = Number(c);
+          if(!isNaN(n)) return n;
+          // sometimes amount comes as string like "200 USDT"
+          const m = String(c).match(/([0-9]+(?:\.[0-9]+)?)/);
+          if(m) return Number(m[1]);
+        }
+      }
+      return 0;
+    }
+
     function renderPage(){
       if(!paymentsData || !paymentsData.length){ if(paymentsList) paymentsList.innerHTML = '<div class="small">没有充值凭证。</div>'; return; }
       const filtered = paymentsData.filter(it => { if(currentFilter === 'pending') return (it.status || 'pending') === 'pending'; return true; });
@@ -327,12 +355,14 @@ Transfer-Encoding: chunked
         wrap.style.border = '1px solid #ddd';
         wrap.style.padding = '10px';
         wrap.style.marginBottom = '8px';
+        const displayId = getRecordId(it) || it.uid || 'unknown';
+        const displayAmount = getAmount(it);
         const title = document.createElement('div');
-        title.innerHTML = `<strong>用户:</strong> ${it.uid || '未知'} &nbsp; <strong>金额(USDT):</strong> ${it.amount || 0} &nbsp; <strong>状态:</strong> ${statusText(it.status || 'pending')}`;
+        title.innerHTML = `<strong>用户:</strong> ${it.uid || '未知'} &nbsp; <strong>金额(USDT):</strong> ${displayAmount} &nbsp; <strong>状态:</strong> ${statusText(it.status || 'pending')}`;
         const meta = document.createElement('div');
         meta.className = 'small';
         meta.style.marginTop = '6px';
-        meta.textContent = `id: ${it.id}  创建时间: ${fmtDate(it.createdAt || it.createdAtISO || it.createdAt)}`;
+        meta.textContent = `id: ${displayId}  创建时间: ${fmtDate(it.createdAt || it.createdAtISO || it.createdAt)}`;
         wrap.appendChild(title);
         wrap.appendChild(meta);
         if(it.receiptViewUrl || it.receiptUrl){
