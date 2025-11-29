@@ -311,25 +311,28 @@ Transfer-Encoding: chunked
     const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
     function statusText(s){ return statusMap[s] || s || ''; }
 
-    // Strict helpers: read values from rec.data.item when available
+    // Strict helpers: read values from rec._data.item when available (backend uses _data)
     function getRecordId(rec){
       if(!rec) return undefined;
-      if(rec.data && rec.data.item){
-        return rec.data.item.id || rec.data.item._id || undefined;
+      if(rec._data && rec._data.item){
+        return rec._data.item.id || rec._data.item._id || undefined;
       }
+      // fallback to older shapes
+      if(rec.data && rec.data.item) return rec.data.item.id || rec.data.item._id || undefined;
       return rec.id || rec._id || undefined;
     }
 
     function getUsername(rec){
       if(!rec) return undefined;
+      if(rec._data && rec._data.item && (rec._data.item.username || rec._data.item.userName)) return rec._data.item.username || rec._data.item.userName;
       if(rec.data && rec.data.item && (rec.data.item.username || rec.data.item.userName)) return rec.data.item.username || rec.data.item.userName;
       return rec.username || rec.uid || undefined;
     }
 
     function getAmount(rec){
       if(!rec) return 0;
-      if(rec.data && rec.data.item){
-        const v = rec.data.item.amountRequestedUSDT;
+      if(rec._data && rec._data.item){
+        const v = rec._data.item.amountRequestedUSDT;
         if(v !== undefined && v !== null && v !== ''){
           const n = Number(v);
           if(!isNaN(n)) return n;
@@ -337,6 +340,11 @@ Transfer-Encoding: chunked
           if(m) return Number(m[1]);
         }
         return 0;
+      }
+      if(rec.data && rec.data.item){
+        const v = rec.data.item.amountRequestedUSDT;
+        const n = Number(v);
+        if(!isNaN(n)) return n;
       }
       // fallback to legacy fields
       const v = rec.amount || rec.amountRequestedUSDT || rec.amountApprovedUSDT;
@@ -349,6 +357,7 @@ Transfer-Encoding: chunked
 
     function getCreatedAt(rec){
       if(!rec) return undefined;
+      if(rec._data && rec._data.item && rec._data.item.createdAt) return rec._data.item.createdAt;
       if(rec.data && rec.data.item && rec.data.item.createdAt) return rec.data.item.createdAt;
       return rec.createdAt || rec.createdAtISO || undefined;
     }
@@ -369,8 +378,8 @@ Transfer-Encoding: chunked
         wrap.style.border = '1px solid #ddd';
         wrap.style.padding = '10px';
         wrap.style.marginBottom = '8px';
-        // normalize to the item object when available
-        const item = (it.data && it.data.item) ? it.data.item : it;
+        // normalize to the item object when available (prefer _data then data)
+        const item = (it._data && it._data.item) ? it._data.item : ((it.data && it.data.item) ? it.data.item : it);
         const itemId = (item && (item.id || item._id)) ? (item.id || item._id) : (it.id || it.uid || 'unknown');
         const displayAmount = getAmount(it);
         const displayUser = getUsername(it) || it.uid || '未知';
