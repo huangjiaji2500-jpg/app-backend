@@ -1,6 +1,5 @@
-﻿<!doctype html>
+﻿﻿<!doctype html>
 <html lang="zh-CN">
-  <script>if (typeof id === 'undefined') window.id = null;</script>
   <script>
   (function(){
 
@@ -34,6 +33,7 @@
     function renderPage(){
       paymentsList.appendChild(pager);
     }
+    const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
     })();
     </script>
     </style>
@@ -939,3 +939,4 @@
   </script>
 </body>
 </html>
+
