@@ -307,7 +307,14 @@ Transfer-Encoding: chunked
       }catch(e){ paymentsStatus('加载失败: ' + e.message); }
     }
 
-    function fmtDate(d){ try{ return new Date(d).toLocaleString(); }catch(e){ return d; } }
+    function fmtDate(d){
+      if(!d) return '';
+      try{
+        const dt = new Date(d);
+        if(isNaN(dt.getTime())) return '';
+        return dt.toLocaleString();
+      }catch(e){ return ''; }
+    }
     const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
     function statusText(s){ return statusMap[s] || s || ''; }
 
@@ -364,7 +371,7 @@ Transfer-Encoding: chunked
 
       if(paymentsList) paymentsList.innerHTML = '';
       if(!pageItems.length){ if(paymentsList) paymentsList.innerHTML = '<div class="small">此页无数据。</div>'; }
-      pageItems.forEach(it => {
+      pageItems.forEach((it, idx) => {
         const wrap = document.createElement('div');
         wrap.style.border = '1px solid #ddd';
         wrap.style.padding = '10px';
@@ -403,30 +410,34 @@ Transfer-Encoding: chunked
         if ((it.status || 'pending') === 'pending') {
           const noteRow = document.createElement('div');
           noteRow.style.marginTop = '8px';
-          const noteRow = document.createElement('div');
+
+          const noteLabel = document.createElement('div');
           noteLabel.className = 'small';
           noteLabel.textContent = '审核备注（可选）：';
+
           const noteInput = document.createElement('textarea');
-          // unique id and name to avoid duplicates when pages are merged
-          noteInput.id = 'audit-note-' + itemId;
-          // unique id and name based on item id to avoid duplicates when pages are merged
-          const safeId = String(itemId).replace(/[^a-zA-Z0-9-_:.]/g, '_');
+          noteInput.style.width = '100%';
+          noteInput.style.height = '60px';
+          noteInput.placeholder = '填写审核备注（例如：充值凭证清晰/金额不符等），可留空。';
+
+          // generate a safe unique id per rendered item to avoid duplicates
+          const baseSafe = String(itemId || 'unknown').replace(/[^a-zA-Z0-9-_:.]/g, '_');
+          const uniqueSuffix = (start + idx);
+          const safeId = baseSafe + '-' + uniqueSuffix;
           noteInput.id = 'audit-note-' + safeId;
           noteInput.name = 'audit-note-' + safeId;
-          noteInput.placeholder = '填写审核备注（例如：充值凭证清晰/金额不符等），可留空。';
-          // optional audit status select (unique id/name)
+
+          // status select
           const statusSelect = document.createElement('select');
-          statusSelect.id = 'audit-status-' + itemId;
-          // append status select (unique id/name) and the textarea
-          const safeStatusId = 'audit-status-' + safeId;
-          statusSelect.id = safeStatusId;
-          statusSelect.name = safeStatusId;
-          noteRow.appendChild(statusSelect);
-          noteRow.appendChild(noteInput);
-          const opt2 = document.createElement('option'); opt2.value = 'rejected'; opt2.text = '拒绝';
-          statusSelect.appendChild(opt1); statusSelect.appendChild(opt2);
+          statusSelect.id = 'audit-status-' + safeId;
+          statusSelect.name = 'audit-status-' + safeId;
           statusSelect.style.marginTop = '6px';
+          const optApprove = document.createElement('option'); optApprove.value = 'approved'; optApprove.text = '通过';
+          const optReject = document.createElement('option'); optReject.value = 'rejected'; optReject.text = '拒绝';
+          statusSelect.appendChild(optApprove);
+          statusSelect.appendChild(optReject);
           statusSelect.value = 'approved';
+
           noteRow.appendChild(noteLabel);
           noteRow.appendChild(statusSelect);
           noteRow.appendChild(noteInput);
