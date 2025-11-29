@@ -311,15 +311,28 @@ Transfer-Encoding: chunked
     const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
     function statusText(s){ return statusMap[s] || s || ''; }
 
-    // Robust helpers to extract id and amount from heterogeneous payloads
+    // Robust helpers to extract id, amount, username and createdAt from payloads
     function getRecordId(rec){
       if(!rec) return undefined;
+      // prefer rec.data.item.id if present
+      if(rec.data && rec.data.item){
+        return rec.data.item.id || rec.data.item._id || rec.id || rec._id || undefined;
+      }
       return rec.id || rec._id || (rec.item && (rec.item.id || rec.item._id)) || (rec.data && (rec.data.id || rec.data._id)) || rec.txid || undefined;
     }
 
     function getAmount(rec){
       if(!rec) return 0;
-      // common places where amount may appear in historical payloads
+      // prefer rec.data.item.amountRequestedUSDT when present
+      if(rec.data && rec.data.item){
+        const v = rec.data.item.amountRequestedUSDT || rec.data.item.amount || rec.data.item.amountApprovedUSDT;
+        if(v !== undefined && v !== null && v !== ''){
+          const n = Number(v);
+          if(!isNaN(n)) return n;
+          const m = String(v).match(/([0-9]+(?:\.[0-9]+)?)/);
+          if(m) return Number(m[1]);
+        }
+      }
       const candidates = [
         rec.amount,
         rec.amountApprovedUSDT,
@@ -331,12 +344,23 @@ Transfer-Encoding: chunked
         if(c !== undefined && c !== null && c !== ''){
           const n = Number(c);
           if(!isNaN(n)) return n;
-          // sometimes amount comes as string like "200 USDT"
           const m = String(c).match(/([0-9]+(?:\.[0-9]+)?)/);
           if(m) return Number(m[1]);
         }
       }
       return 0;
+    }
+
+    function getUsername(rec){
+      if(!rec) return undefined;
+      if(rec.data && rec.data.item && rec.data.item.username) return rec.data.item.username;
+      return rec.username || rec.userName || rec.uid || rec.user || undefined;
+    }
+
+    function getCreatedAt(rec){
+      if(!rec) return undefined;
+      if(rec.data && rec.data.item && rec.data.item.createdAt) return rec.data.item.createdAt;
+      return rec.createdAt || rec.createdAtISO || undefined;
     }
 
     function renderPage(){
@@ -355,14 +379,16 @@ Transfer-Encoding: chunked
         wrap.style.border = '1px solid #ddd';
         wrap.style.padding = '10px';
         wrap.style.marginBottom = '8px';
-        const displayId = getRecordId(it) || it.uid || 'unknown';
+        const itemId = getRecordId(it) || (it.data && it.data.item && (it.data.item.id || it.data.item._id)) || it.id || it.uid || 'unknown';
         const displayAmount = getAmount(it);
+        const displayUser = getUsername(it) || it.uid || '未知';
+        const created = getCreatedAt(it) || it.createdAt || it.createdAtISO;
         const title = document.createElement('div');
-        title.innerHTML = `<strong>用户:</strong> ${it.uid || '未知'} &nbsp; <strong>金额(USDT):</strong> ${displayAmount} &nbsp; <strong>状态:</strong> ${statusText(it.status || 'pending')}`;
+        title.innerHTML = `<strong>用户:</strong> ${displayUser} &nbsp; <strong>金额(USDT):</strong> ${displayAmount} &nbsp; <strong>状态:</strong> ${statusText(it.status || 'pending')}`;
         const meta = document.createElement('div');
         meta.className = 'small';
         meta.style.marginTop = '6px';
-        meta.textContent = `id: ${displayId}  创建时间: ${fmtDate(it.createdAt || it.createdAtISO || it.createdAt)}`;
+        meta.textContent = `id: ${itemId}  创建时间: ${fmtDate(created)}`;
         wrap.appendChild(title);
         wrap.appendChild(meta);
         if(it.receiptViewUrl || it.receiptUrl){
@@ -389,10 +415,23 @@ Transfer-Encoding: chunked
           noteLabel.className = 'small';
           noteLabel.textContent = '审核备注（可选）：';
           const noteInput = document.createElement('textarea');
+          // unique id and name to avoid duplicates when pages are merged
+          noteInput.id = 'audit-note-' + itemId;
+          noteInput.name = 'audit-note-' + itemId;
           noteInput.style.width = '100%';
           noteInput.style.height = '60px';
           noteInput.placeholder = '填写审核备注（例如：充值凭证清晰/金额不符等），可留空。';
+          // optional audit status select (unique id/name)
+          const statusSelect = document.createElement('select');
+          statusSelect.id = 'audit-status-' + itemId;
+          statusSelect.name = 'audit-status-' + itemId;
+          const opt1 = document.createElement('option'); opt1.value = 'approved'; opt1.text = '通过';
+          const opt2 = document.createElement('option'); opt2.value = 'rejected'; opt2.text = '拒绝';
+          statusSelect.appendChild(opt1); statusSelect.appendChild(opt2);
+          statusSelect.style.marginTop = '6px';
+          statusSelect.value = 'approved';
           noteRow.appendChild(noteLabel);
+          noteRow.appendChild(statusSelect);
           noteRow.appendChild(noteInput);
           wrap.appendChild(noteRow);
 
@@ -400,10 +439,10 @@ Transfer-Encoding: chunked
           btnRow.style.marginTop = '8px';
           const approve = document.createElement('button');
           approve.textContent = '通过';
-          approve.onclick = () => handleAction(it.id, 'approved', noteInput.value);
+          approve.onclick = () => handleAction(itemId, 'approved', noteInput.value);
           const reject = document.createElement('button');
           reject.textContent = '拒绝';
-          reject.onclick = () => handleAction(it.id, 'rejected', noteInput.value);
+          reject.onclick = () => handleAction(itemId, 'rejected', noteInput.value);
           btnRow.appendChild(approve);
           btnRow.appendChild(reject);
           wrap.appendChild(btnRow);
