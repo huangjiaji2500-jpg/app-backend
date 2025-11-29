@@ -349,10 +349,10 @@
 
         // 兼容多种数据形态，优先使用 payload.item 的字段
         const payload = (it && it.payload) || {};
-        const item = payload.item || payload.deposit || payload || {};
-        const username = item.username || item.user || it.username || it.uid || payload.username || '未知';
-        const amount = Number(item.amountApprovedUSDT || item.amountApproved || item.amount || it.amount || payload.amount || 0) || 0;
-        const item = (it.data && it.data.item) ? it.data.item : it;
+        const payloadItem = payload.item || payload.deposit || payload || {};
+        const username = payloadItem.username || payloadItem.user || it.username || it.uid || payload.username || '未知';
+        const amount = Number(payloadItem.amountApprovedUSDT || payloadItem.amountApproved || payloadItem.amount || it.amount || payload.amount || 0) || 0;
+        const item = (it.data && it.data.item) ? it.data.item : (payloadItem && Object.keys(payloadItem).length ? payloadItem : it);
         const itemId = (item && (item.id || item._id)) ? (item.id || item._id) : (it.id || it.uid || '-');
         const displayAmount = (item && (item.amountRequestedUSDT || item.amount || item.amountRequested)) || it.amount || 0;
         const displayUser = (item && (item.username || item.userName)) || it.uid || '未知';
@@ -365,7 +365,7 @@
         const meta = document.createElement('div');
         meta.className = 'small';
         meta.style.marginTop = '6px';
-        meta.textContent = `记录ID: ${docId}  状态: ${statusText(it.status || (item.status || payload.status) || 'pending')}`;
+        meta.textContent = `记录ID: ${itemId}  状态: ${statusText(it.status || (item.status || payload.status) || 'pending')}`;
         wrap.appendChild(title);
         wrap.appendChild(meta);
 

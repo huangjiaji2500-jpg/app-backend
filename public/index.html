@@ -353,7 +353,7 @@
         const item = payload.item || payload.deposit || payload || {};
         const username = item.username || item.user || it.username || it.uid || payload.username || '未知';
         const amount = Number(item.amountApprovedUSDT || item.amountApproved || item.amount || it.amount || payload.amount || 0) || 0;
-        const docId = it._id || it.id || (item.id || payload.id) || '-';
+        const itemId = it._id || it.id || (item.id || payload.id) || '-';
         const createdRaw = it.receivedAt || it.createdAt || payload.receivedAt || payload.createdAt || item.createdAt || item.ts || item.time || payload.ts || null;
         const created = createdRaw ? fmtDate(createdRaw) : '-';
 
@@ -363,7 +363,7 @@
         const meta = document.createElement('div');
         meta.className = 'small';
         meta.style.marginTop = '6px';
-        meta.textContent = `记录ID: ${docId}  状态: ${statusText(it.status || (item.status || payload.status) || 'pending')}`;
+        meta.textContent = `记录ID: ${itemId}  状态: ${statusText(it.status || (item.status || payload.status) || 'pending')}`;
         wrap.appendChild(title);
         wrap.appendChild(meta);
 
