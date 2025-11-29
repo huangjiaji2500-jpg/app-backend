@@ -319,24 +319,50 @@ Transfer-Encoding: chunked
     function statusText(s){ return statusMap[s] || s || ''; }
 
     // Strict helpers: read values from rec.data.item (backend uses data->item)
+    // Robust finder: locate the item object inside various nested payload shapes
+    function findItem(obj){
+      if(!obj || typeof obj !== 'object') return null;
+      // common direct locations
+      if(obj.data && obj.data.item && typeof obj.data.item === 'object') return obj.data.item;
+      if(obj._data && obj._data.item && typeof obj._data.item === 'object') return obj._data.item;
+      if(obj.item && typeof obj.item === 'object') return obj.item;
+      // BFS search for an object that looks like an item (has id/username/amountRequestedUSDT)
+      const queue = [obj];
+      const seen = new Set();
+      while(queue.length){
+        const cur = queue.shift();
+        if(!cur || typeof cur !== 'object') continue;
+        if(seen.has(cur)) continue; seen.add(cur);
+        if(cur.item && typeof cur.item === 'object') return cur.item;
+        if((cur.id || cur._id) && (cur.username || cur.amountRequestedUSDT || cur.amountRequested)) return cur;
+        for(const k in cur){
+          try{ const v = cur[k]; if(v && typeof v === 'object') queue.push(v); }catch(e){}
+        }
+      }
+      return null;
+    }
+
     function getRecordId(rec){
       if(!rec) return undefined;
-      if(rec.data && rec.data.item){
-        return rec.data.item.id || rec.data.item._id || undefined;
-      }
+      const item = findItem(rec);
+      if(item) return item.id || item._id || undefined;
+      if(rec.data && rec.data.item) return rec.data.item.id || rec.data.item._id || undefined;
       return rec.id || rec._id || undefined;
     }
 
     function getUsername(rec){
       if(!rec) return undefined;
+      const item = findItem(rec);
+      if(item && (item.username || item.userName)) return item.username || item.userName;
       if(rec.data && rec.data.item && (rec.data.item.username || rec.data.item.userName)) return rec.data.item.username || rec.data.item.userName;
       return rec.username || rec.uid || undefined;
     }
 
     function getAmount(rec){
       if(!rec) return 0;
-      if(rec.data && rec.data.item){
-        const v = rec.data.item.amountRequestedUSDT;
+      const item = findItem(rec);
+      if(item){
+        const v = item.amountRequestedUSDT || item.amount || item.amountRequested;
         if(v !== undefined && v !== null && v !== ''){
           const n = Number(v);
           if(!isNaN(n)) return n;
@@ -344,6 +370,11 @@ Transfer-Encoding: chunked
           if(m) return Number(m[1]);
         }
         return 0;
+      }
+      if(rec.data && rec.data.item){
+        const v = rec.data.item.amountRequestedUSDT;
+        const n = Number(v);
+        if(!isNaN(n)) return n;
       }
       // fallback to legacy fields
       const v = rec.amount || rec.amountRequestedUSDT || rec.amountApprovedUSDT;
@@ -356,6 +387,8 @@ Transfer-Encoding: chunked
 
     function getCreatedAt(rec){
       if(!rec) return undefined;
+      const item = findItem(rec);
+      if(item && item.createdAt) return item.createdAt;
       if(rec.data && rec.data.item && rec.data.item.createdAt) return rec.data.item.createdAt;
       return rec.createdAt || rec.createdAtISO || undefined;
     }
