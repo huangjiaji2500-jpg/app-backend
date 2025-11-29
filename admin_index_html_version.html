@@ -222,10 +222,10 @@
           btnRow.style.marginTop = '8px';
           const approve = document.createElement('button');
           approve.textContent = '閫氳繃';
-          approve.onclick = () => handleAction(it.id, 'approved', noteInput.value);
+          approve.onclick = () => handleAction(itemId, 'approved', noteInput.value);
           const reject = document.createElement('button');
           reject.textContent = '鎷掔粷';
-          reject.onclick = () => handleAction(it.id, 'rejected', noteInput.value);
+          reject.onclick = () => handleAction(itemId, 'rejected', noteInput.value);
           btnRow.appendChild(approve);
           btnRow.appendChild(reject);
           wrap.appendChild(btnRow);

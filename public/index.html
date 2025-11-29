@@ -342,7 +342,7 @@
 
       paymentsList.innerHTML = '';
       if(!pageItems.length){ paymentsList.innerHTML = '<div class="small">此页无数据。</div>'; }
-      pageItems.forEach(it => {
+      pageItems.forEach((it, idx) => {
         const wrap = document.createElement('div');
         wrap.style.border = '1px solid #ddd';
         wrap.style.padding = '10px';
@@ -728,12 +728,18 @@
         wrap.style.border = '1px solid #ddd';
         wrap.style.padding = '10px';
         wrap.style.marginBottom = '8px';
+  // normalize to item if present
+  const item = (it.data && it.data.item) ? it.data.item : it;
+  const itemId = (item && (item.id || item._id)) ? (item.id || item._id) : (it.id || it.uid || 'unknown');
+  const displayAmount = (item && (item.amountRequestedUSDT || item.amount || item.amountRequested)) || it.amount || 0;
+  const displayUser = (item && (item.username || item.userName)) || it.uid || '未知';
+  const created = (item && item.createdAt) || it.createdAt || it.createdAtISO || null;
   const title = document.createElement('div');
-  title.innerHTML = `<strong>用户:</strong> ${it.uid || '未知'} &nbsp; <strong>金额(USDT):</strong> ${it.amount || 0} &nbsp; <strong>状态:</strong> ${statusText(it.status || 'pending')}`;
+  title.innerHTML = `<strong>用户:</strong> ${displayUser} &nbsp; <strong>金额(USDT):</strong> ${displayAmount} &nbsp; <strong>状态:</strong> ${statusText(it.status || 'pending')}`;
         const meta = document.createElement('div');
         meta.className = 'small';
         meta.style.marginTop = '6px';
-  meta.textContent = `id: ${it.id}  创建时间: ${fmtDate(it.createdAt || it.createdAtISO || it.createdAt)} `;
+  meta.textContent = `id: ${itemId}  创建时间: ${fmtDate(created)}`;
         wrap.appendChild(title);
         wrap.appendChild(meta);
         if(it.receiptViewUrl || it.receiptUrl){
@@ -769,6 +775,11 @@
           noteInput.style.width = '100%';
           noteInput.style.height = '60px';
           noteInput.placeholder = '填写审核备注（例如：充值凭证清晰/金额不符等），可留空。';
+          // unique ids to avoid duplicates
+          const baseSafe = String(itemId || 'unknown').replace(/[^a-zA-Z0-9-_:.]/g, '_');
+          const safeId = baseSafe + '-' + (start + idx);
+          noteInput.id = 'audit-note-' + safeId;
+          noteInput.name = 'audit-note-' + safeId;
           noteRow.appendChild(noteLabel);
           noteRow.appendChild(noteInput);
           wrap.appendChild(noteRow);
@@ -777,10 +788,10 @@
           btnRow.style.marginTop = '8px';
           const approve = document.createElement('button');
           approve.textContent = '通过';
-          approve.onclick = () => handleAction(it.id, 'approved', noteInput.value);
+          approve.onclick = () => handleAction(itemId, 'approved', noteInput.value);
           const reject = document.createElement('button');
           reject.textContent = '拒绝';
-          reject.onclick = () => handleAction(it.id, 'rejected', noteInput.value);
+          reject.onclick = () => handleAction(itemId, 'rejected', noteInput.value);
           btnRow.appendChild(approve);
           btnRow.appendChild(reject);
           wrap.appendChild(btnRow);
