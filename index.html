@@ -29,11 +29,11 @@
 
     <div class="row">
     <label>管理员密钥</label><br/>
-    <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
+    <input id="public-adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
       <div style="margin-top:6px">
-        <button id="saveSecret">保存到 sessionStorage</button>
-        <button id="openUsers" style="margin-left:8px">用户管理</button>
-        <button id="clearSecret">清除</button>
+        <button id="public-saveSecret">保存到 sessionStorage</button>
+        <button id="public-openUsers" style="margin-left:8px">用户管理</button>
+        <button id="public-clearSecret">清除</button>
       </div>
     </div>
 
@@ -44,15 +44,29 @@
     <script>
     (function(){
       window.$ = window.$ || (sel => document.querySelector(sel));
-      window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
+      // Prefer looking up elements with a `public-` prefix when using `#id` selectors
+      (function(){
+        const orig$ = window.$;
+        window.$ = function(sel){
+          try{
+            if(typeof sel === 'string' && sel[0] === '#'){
+              const name = sel.slice(1);
+              const el = document.getElementById('public-' + name) || document.getElementById(name) || orig$(sel);
+              return el;
+            }
+          }catch(e){}
+          return orig$(sel);
+        };
+      })();
+      window.__admin_status = window.__admin_status || (txt => { const s = document.getElementById('public-status') || document.getElementById('status'); if(s) s.textContent = txt; });
 
       // load admin secret from sessionStorage (use safe global)
       window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
       window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
       if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
-      $('#saveSecret').onclick = () => {…};
-      $('#clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
+      $('#public-saveSecret').onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value && window.adminSecretInput.value.trim()); window.__admin_status('管理员密钥已保存到 sessionStorage'); };
+      $('#public-clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
       // Load current platform config and populate the visual form
       $('#load').onclick = async () => {…};
@@ -241,11 +255,11 @@
       };
 
       // File upload -> convert to data URL and preview
-      document.getElementById('pdFile').addEventListener('change', function(ev){
+      (document.getElementById('public-pdFile') || document.getElementById('pdFile')).addEventListener('change', function(ev){
         const f = ev.target.files && ev.target.files[0];
         if(!f) return;
         const reader = new FileReader();
-        reader.onload = function(e){ try{ const data = e.target.result; $('#pdPreview').src = data; $('#pdPreviewWrap').style.display = 'block'; }catch(err){} };
+        reader.onload = function(e){ try{ const data = e.target.result; ($('#public-pdPreview') || $('#pdPreview')).src = data; ($('#public-pdPreviewWrap') || $('#pdPreviewWrap')).style.display = 'block'; }catch(err){} };
         reader.readAsDataURL(f);
       });
 

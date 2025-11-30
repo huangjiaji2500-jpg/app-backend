@@ -45,11 +45,11 @@
 
     <div class="row">
     <label>管理员密钥</label><br/>
-    <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
+    <input id="public-adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
       <div style="margin-top:6px">
-        <button id="saveSecret">保存到 sessionStorage</button>
-        <button id="openUsers" style="margin-left:8px">用户管理</button>
-        <button id="clearSecret">清除</button>
+        <button id="public-saveSecret">保存到 sessionStorage</button>
+        <button id="public-openUsers" style="margin-left:8px">用户管理</button>
+        <button id="public-clearSecret">清除</button>
       </div>
     </div>
 
@@ -57,13 +57,13 @@
     <h2>审核充值凭证</h2>
     <p class="small">从服务器加载最近的充值凭证，审核通过后会为用户增加 USDT 余额。</p>
     <div class="row">
-    <button id="loadPayments">加载充值凭证</button>
-    <label style="margin-left:12px">筛选: <select id="filterSelect"><option value="pending">仅待审核</option><option value="all">全部</option></select></label>
-      <span id="paymentsStatus" style="margin-left:12px"></span>
-      <button id="toggleRaw" style="margin-left:12px">显示原始响应</button>
+    <button id="public-loadPayments">加载充值凭证</button>
+    <label style="margin-left:12px">筛选: <select id="public-filterSelect"><option value="pending">仅待审核</option><option value="all">全部</option></select></label>
+      <span id="public-paymentsStatus" style="margin-left:12px"></span>
+      <button id="public-toggleRaw" style="margin-left:12px">显示原始响应</button>
     </div>
-    <pre id="rawResponse" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;border:1px solid #eee;display:none;max-height:200px;overflow:auto;margin-top:8px"></pre>
-    <div id="paymentsList" style="margin-top:12px"></div>
+    <pre id="public-rawResponse" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;border:1px solid #eee;display:none;max-height:200px;overflow:auto;margin-top:8px"></pre>
+    <div id="public-paymentsList" style="margin-top:12px"></div>
 
     <div class="row">
       <label>显示汇率</label>
@@ -102,7 +102,7 @@
           <thead>
             <tr><th>用户ID</th><th>用户名 / 显示名</th><th>邮箱</th><th>注册时间</th><th>最近登录</th><th>设备</th><th>操作</th></tr>
           </thead>
-          <tbody id="usersBody">
+          <tbody id="public-usersBody">
           </tbody>
         </table>
       </div>
@@ -120,23 +120,23 @@
     <div class="row">
       <h2>平台收款二维码管理</h2>
       <div style="max-width:640px;border:1px solid #eee;padding:12px;border-radius:6px">
-        <div style="margin-bottom:8px"><label>收款地址</label><br/><input id="pdAddress" style="width:100%" placeholder="收款地址（例如：USDT 地址）" /></div>
-        <div style="margin-bottom:8px"><label>备注说明</label><br/><input id="pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
+        <div style="margin-bottom:8px"><label>收款地址</label><br/><input id="public-pdAddress" style="width:100%" placeholder="收款地址（例如：USDT 地址）" /></div>
+        <div style="margin-bottom:8px"><label>备注说明</label><br/><input id="public-pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
         <div style="margin-bottom:8px">
           <label>上传二维码图片（PNG/JPG）</label><br/>
-          <input type="file" id="pdFile" accept="image/png,image/jpeg" />
-          <div id="pdPreviewWrap" style="margin-top:8px;display:none">
+          <input type="file" id="public-pdFile" accept="image/png,image/jpeg" />
+          <div id="public-pdPreviewWrap" style="margin-top:8px;display:none">
             <div class="small">图片预览：</div>
-            <img id="pdPreview" src="" style="max-width:320px;border:1px solid #ddd;padding:6px;background:#fff" />
+            <img id="public-pdPreview" src="" style="max-width:320px;border:1px solid #ddd;padding:6px;background:#fff" />
           </div>
         </div>
         <div style="margin-top:6px">
-          <label><input type="checkbox" id="pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
+          <label><input type="checkbox" id="public-pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
         </div>
         <div style="margin-top:12px">
-          <button id="load">加载当前配置</button>
-          <button id="save" style="margin-left:8px">保存到服务器</button>
-          <span id="status" style="margin-left:12px"></span>
+          <button id="public-load">加载当前配置</button>
+          <button id="public-save" style="margin-left:8px">保存到服务器</button>
+          <span id="public-status" style="margin-left:12px"></span>
         </div>
       </div>
     </div>
@@ -157,19 +157,19 @@
 
     <script>
       window.$ = window.$ || (sel => document.querySelector(sel));
-      window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
+      window.__admin_status = window.__admin_status || (txt => { $('#public-status').textContent = txt; });
 
 
       // load admin secret from sessionStorage (use a safe global key to avoid redeclaration)
       window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-      window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+      window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#public-adminSecret') : (document.getElementById ? document.getElementById('public-adminSecret') : null));
       if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
-      $('#saveSecret').onclick = () => {
-        sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput.value.trim());
+      $('#public-saveSecret').onclick = () => {
+        sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim());
         window.__admin_status('管理员密钥已保存到 sessionStorage');
       };
-      $('#clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
+      $('#public-clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
       // Load current platform config and populate the visual form
       $('#load').onclick = async () => {
@@ -186,10 +186,10 @@
           // populate platform deposit
           try{
             const pd = j.platformDeposit || {};
-            $('#pdAddress').value = pd.address || pd.value || '';
-            $('#pdNote').value = pd.note || pd.desc || '';
-            if(pd.qrImage){ $('#pdPreview').src = pd.qrImage; $('#pdPreviewWrap').style.display = 'block'; }
-            else { $('#pdPreview').src = ''; $('#pdPreviewWrap').style.display = 'none'; }
+            $('#public-pdAddress').value = pd.address || pd.value || '';
+            $('#public-pdNote').value = pd.note || pd.desc || '';
+            if(pd.qrImage){ $('#public-pdPreview').src = pd.qrImage; $('#public-pdPreviewWrap').style.display = 'block'; }
+            else { $('#public-pdPreview').src = ''; $('#public-pdPreviewWrap').style.display = 'none'; }
           }catch(e){ }
           window.__admin_status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
         } catch(e){
@@ -208,15 +208,15 @@
 
         // collect platformDeposit
         const platformDeposit = {};
-        const addr = $('#pdAddress').value && $('#pdAddress').value.trim();
-        const note = $('#pdNote').value && $('#pdNote').value.trim();
+        const addr = $('#public-pdAddress').value && $('#public-pdAddress').value.trim();
+        const note = $('#public-pdNote').value && $('#public-pdNote').value.trim();
         if(addr) platformDeposit.address = addr;
         if(note) platformDeposit.note = note;
         // if preview image is a data URL, include it
-        const imgSrc = $('#pdPreview').src || '';
+        const imgSrc = $('#public-pdPreview').src || '';
         if(imgSrc && imgSrc.startsWith('data:')) platformDeposit.qrImage = imgSrc;
 
-        const syncAll = !!$('#pdSyncAll').checked;
+        const syncAll = !!$('#public-pdSyncAll').checked;
 
         window.__admin_status('保存中...');
         try{
@@ -262,7 +262,7 @@
         const f = ev.target.files && ev.target.files[0];
         if(!f) return;
         const reader = new FileReader();
-        reader.onload = function(e){ try{ const data = e.target.result; $('#pdPreview').src = data; $('#pdPreviewWrap').style.display = 'block'; }catch(err){} };
+        reader.onload = function(e){ try{ const data = e.target.result; $('#public-pdPreview').src = data; $('#public-pdPreviewWrap').style.display = 'block'; }catch(err){} };
         reader.readAsDataURL(f);
       });
 
@@ -277,20 +277,20 @@
         try{
           const s = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
           if(s){ // auto load
-            setTimeout(()=>{ if(document.getElementById('loadPayments')) loadPayments(); if(document.getElementById('loadUsers')) loadUsers(); if(document.getElementById('load')) document.getElementById('load').click(); }, 400);
+            setTimeout(()=>{ if(document.getElementById('public-loadPayments')) loadPayments(); if(document.getElementById('loadUsers')) loadUsers(); if(document.getElementById('public-load')) document.getElementById('public-load').click(); }, 400);
           }
         }catch(e){}
       });
 
       // Payments review with default pending filter + client-side pagination
-      const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
-      const rawResponseEl = $('#rawResponse');
-      $('#toggleRaw').onclick = () => {
+      const paymentsStatus = sel => { $('#public-paymentsStatus').textContent = sel; };
+      const rawResponseEl = $('#public-rawResponse');
+      $('#public-toggleRaw').onclick = () => {
         if(!rawResponseEl) return;
         rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none';
       };
-      const paymentsList = $('#paymentsList');
-      const filterSelect = $('#filterSelect');
+      const paymentsList = $('#public-paymentsList');
+      const filterSelect = $('#public-filterSelect');
 
     let paymentsData = []; // raw from server
     let currentFilter = 'all';
@@ -483,15 +483,15 @@
         }catch(e){ paymentsStatus('操作失败: ' + e.message); }
       }
 
-      $('#loadPayments').onclick = loadPayments;
+      $('#public-loadPayments').onclick = loadPayments;
       // 打开用户管理区（滚动到页面内）
-      const openBtn = document.getElementById('openUsers');
+      const openBtn = document.getElementById('public-openUsers');
       if(openBtn) openBtn.onclick = () => { const s = document.getElementById('usersSection'); if(s) s.scrollIntoView({behavior:'smooth'}); };
     </script>
     <script>
       // ========== 用户管理脚本 ==========
       const usersStatusEl = document.getElementById('usersStatus');
-      const usersBody = document.getElementById('usersBody');
+      const usersBody = document.getElementById('public-usersBody');
       const qInput = document.getElementById('q');
 
       function usersStatus(txt){ if(usersStatusEl) usersStatusEl.textContent = txt; }
@@ -527,9 +527,9 @@
           usersBody.appendChild(tr);
         });
         // attach handlers
-        document.querySelectorAll('#usersBody .viewBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userFetchUserDetail(id); });
-        document.querySelectorAll('#usersBody .disableBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userToggleDisable(id, ev.currentTarget); });
-        document.querySelectorAll('#usersBody .resetBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userResetPassword(id); });
+        document.querySelectorAll('#public-usersBody .viewBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userFetchUserDetail(id); });
+        document.querySelectorAll('#public-usersBody .disableBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userToggleDisable(id, ev.currentTarget); });
+        document.querySelectorAll('#public-usersBody .resetBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userResetPassword(id); });
       }
 
       // modal handlers
@@ -585,12 +585,12 @@
     </script>
   </body>
   </html>
-        <label><input type="checkbox" id="pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
+        <label><input type="checkbox" id="public-pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
       </div>
       <div style="margin-top:12px">
-        <button id="load">加载当前配置</button>
-        <button id="save" style="margin-left:8px">保存到服务器</button>
-        <span id="status" style="margin-left:12px"></span>
+        <button id="public-load">加载当前配置</button>
+        <button id="public-save" style="margin-left:8px">保存到服务器</button>
+        <span id="public-status" style="margin-left:12px"></span>
       </div>
     </div>
   </div>
@@ -612,36 +612,36 @@
 
   <script>(function(){
     window.$ = window.$ || (sel => document.querySelector(sel));
-    window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
+    window.__admin_status = window.__admin_status || (txt => { $('#public-status').textContent = txt; });
 
     // load admin secret from sessionStorage (use a safe global key to avoid redeclaration)
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-    window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+    window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#public-adminSecret') : (document.getElementById ? document.getElementById('public-adminSecret') : null));
     if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
-    $('#saveSecret').onclick = () => {
+    $('#public-saveSecret').onclick = () => {
         sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim());
       window.__admin_status('管理员密钥已保存到 sessionStorage');
     };
-    $('#clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
+    $('#public-clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
-    $('#load').onclick = async () => {
-      status('加载中...');
+    $('#public-load').onclick = async () => {
+      window.__admin_status('加载中...');
       try {
         const r = await fetch('/api/public/platform-config');
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
         if(j.displayRates) $('#displayRates').value = JSON.stringify(j.displayRates, null, 2);
         if(j.platformDeposit) $('#platformDeposit').value = JSON.stringify(j.platformDeposit, null, 2);
-        status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
+        window.__admin_status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
       } catch(e){
-        status('加载失败: ' + e.message);
+        window.__admin_status('加载失败: ' + e.message);
       }
     };
 
-    $('#save').onclick = async () => {
+    $('#public-save').onclick = async () => {
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
-      if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
+      if(!secret){ window.__admin_status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
       let displayRates, platformDeposit;
       try{
@@ -651,7 +651,7 @@
         platformDeposit = JSON.parse($('#platformDeposit').value || '{}');
       }catch(e){ status('platformDeposit JSON 解析失败: ' + e.message); return; }
 
-      status('保存中...');
+      window.__admin_status('保存中...');
       try{
         const r = await fetch('/api/admin/set-platform-config', {
           method: 'POST',
@@ -663,21 +663,21 @@
         });
         const j = await r.json().catch(()=>({ok:false}));
         if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
-        status('保存成功');
+        window.__admin_status('保存成功');
       }catch(e){
-        status('保存失败: ' + e.message);
+        window.__admin_status('保存失败: ' + e.message);
       }
     };
 
     // Payments review with default pending filter + client-side pagination
-    const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
-    const rawResponseEl = $('#rawResponse');
-    $('#toggleRaw').onclick = () => {
+    const paymentsStatus = sel => { $('#public-paymentsStatus').textContent = sel; };
+    const rawResponseEl = $('#public-rawResponse');
+    $('#public-toggleRaw').onclick = () => {
       if(!rawResponseEl) return;
       rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none';
     };
-    const paymentsList = $('#paymentsList');
-    const filterSelect = $('#filterSelect');
+    const paymentsList = $('#public-paymentsList');
+    const filterSelect = $('#public-filterSelect');
 
   let paymentsData = []; // raw from server
   let currentFilter = 'all';
@@ -688,16 +688,16 @@
 
     async function loadPayments() {
       paymentsStatus('加载中...');
-      paymentsList.innerHTML = '';
+      if(paymentsList) paymentsList.innerHTML = '';
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
       try{
         const r = await fetch('/api/admin/payments', { headers: { 'x-admin-secret': secret } });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
-  paymentsData = j.payments || [];
-  paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
-        try{ rawResponseEl.style.display = 'block'; rawResponseEl.textContent = JSON.stringify(j, null, 2); }catch(e){ /* ignore */ }
+    paymentsData = j.payments || [];
+    paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
+      try{ if(rawResponseEl){ rawResponseEl.style.display = 'block'; rawResponseEl.textContent = JSON.stringify(j, null, 2); } }catch(e){ /* ignore */ }
         currentPage = 1;
         renderPage();
       }catch(e){ paymentsStatus('加载失败: ' + e.message); }
@@ -709,7 +709,7 @@
   function statusText(s){ return statusMap[s] || s || ''; }
 
     function renderPage(){
-      if(!paymentsData || !paymentsData.length){ paymentsList.innerHTML = '<div class="small">没有充值凭证。</div>'; return; }
+      if(!paymentsData || !paymentsData.length){ if(paymentsList) paymentsList.innerHTML = '<div class="small">没有充值凭证。</div>'; return; }
       // apply filter
       const filtered = paymentsData.filter(it => {
         if(currentFilter === 'pending') return (it.status || 'pending') === 'pending';

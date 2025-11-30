@@ -65,11 +65,11 @@ Transfer-Encoding: chunked
 
       <div class="row">
       <label>管理员密钥</label><br/>
-      <input id="adminSecret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
+      <input id="admin-secret" style="width:100%" placeholder="粘贴管理员密钥后点击 保存到 sessionStorage" />
         <div style="margin-top:6px">
-          <button id="saveSecret">保存到 sessionStorage</button>
-          <button id="openUsers" style="margin-left:8px">用户管理</button>
-          <button id="clearSecret">清除</button>
+          <button id="admin-saveSecret">保存到 sessionStorage</button>
+          <button id="admin-openUsers" style="margin-left:8px">用户管理</button>
+          <button id="admin-clearSecret">清除</button>
         </div>
       </div>
 
@@ -77,13 +77,13 @@ Transfer-Encoding: chunked
       <h2>审核充值凭证</h2>
       <p class="small">从服务器加载最近的充值凭证，审核通过后会为用户增加 USDT 余额。</p>
       <div class="row">
-      <button id="loadPayments">加载充值凭证</button>
-      <label style="margin-left:12px">筛选: <select id="filterSelect"><option value="pending">仅待审核</option><option value="all">全部</option></select></label>
-        <span id="paymentsStatus" style="margin-left:12px"></span>
-        <button id="toggleRaw" style="margin-left:12px">显示原始响应</button>
+      <button id="admin-loadPayments">加载充值凭证</button>
+      <label style="margin-left:12px">筛选: <select id="admin-filterSelect"><option value="pending">仅待审核</option><option value="all">全部</option></select></label>
+        <span id="admin-paymentsStatus" style="margin-left:12px"></span>
+        <button id="admin-toggleRaw" style="margin-left:12px">显示原始响应</button>
       </div>
-      <pre id="rawResponse" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;border:1px solid #eee;display:none;max-height:200px;overflow:auto;margin-top:8px"></pre>
-      <div id="paymentsList" style="margin-top:12px"></div>
+      <pre id="admin-rawResponse" style="white-space:pre-wrap;background:#f7f7f7;padding:8px;border:1px solid #eee;display:none;max-height:200px;overflow:auto;margin-top:8px"></pre>
+      <div id="admin-paymentsList" style="margin-top:12px"></div>
 
       <div class="row">
         <label>显示汇率（JSON）</label>
@@ -96,9 +96,9 @@ Transfer-Encoding: chunked
       </div>
 
       <div class="row">
-        <button id="load">加载当前配置</button>
-        <button id="save">保存到服务器</button>
-        <span id="status" style="margin-left:12px"></span>
+        <button id="admin-load">加载当前配置</button>
+        <button id="admin-save">保存到服务器</button>
+        <span id="admin-status" style="margin-left:12px"></span>
       </div>
     </div>
     <!-- 管理首页内容结束 -->
@@ -111,7 +111,7 @@ Transfer-Encoding: chunked
       <button id="users-refresh-btn" class="user-action-btn" type="button">刷新</button>
     </div>
     <div class="user-table-wrap">
-      <table id="users-table">
+      <table id="admin-users-table">
         <thead>
           <tr>
             <th>用户名</th>
@@ -120,12 +120,12 @@ Transfer-Encoding: chunked
             <th>操作</th>
           </tr>
         </thead>
-        <tbody id="users-tbody">
+        <tbody id="admin-users-tbody">
           <tr><td colspan="4" class="user-loading">加载中...</td></tr>
         </tbody>
       </table>
     </div>
-    <div id="users-error" class="user-error" style="display:none"></div>
+    <div id="admin-users-error" class="user-error" style="display:none"></div>
     <!-- 用户管理内容结束 -->
   </div>
   <script>(function(){
@@ -148,8 +148,8 @@ Transfer-Encoding: chunked
     });
     // 用户管理页逻辑（作用域隔离，所有ID/变量前缀users-）
     function usersFetchList(keyword) {
-      const tbody = document.getElementById('users-tbody');
-      const errorDiv = document.getElementById('users-error');
+      const tbody = document.getElementById('admin-users-tbody');
+        const errorDiv = document.getElementById('admin-users-error');
       tbody.innerHTML = '<tr><td colspan="4" class="user-loading">加载中...</td></tr>';
       errorDiv.style.display = 'none';
       fetch('/api/admin/users?keyword=' + encodeURIComponent(keyword||''), { credentials: 'same-origin' })
@@ -182,7 +182,7 @@ Transfer-Encoding: chunked
     document.getElementById('users-search-input').addEventListener('keydown', function(e) {
       if (e.key === 'Enter') usersFetchList(this.value);
     });
-    document.getElementById('users-tbody').onclick = function(e) {
+    document.getElementById('admin-users-tbody').onclick = function(e) {
       if (e.target && e.target.classList.contains('delete')) {
         const uid = e.target.getAttribute('data-uid');
         if (!uid) return;
@@ -219,18 +219,18 @@ Transfer-Encoding: chunked
 
     // load admin secret from sessionStorage (use safe global)
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-    window.adminSecretInput = window.adminSecretInput || ($home ? $home('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+    window.adminSecretInput = window.adminSecretInput || ($home ? $home('#admin-secret') : (document.getElementById ? document.getElementById('admin-secret') : null));
     if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
-    const saveBtn = $home('#saveSecret');
+    const saveBtn = $home('#admin-saveSecret');
     if (saveBtn) saveBtn.onclick = () => {
       sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput.value.trim());
       window.__admin_status('管理员密钥已保存到 sessionStorage');
     };
-    const clearBtn = $home('#clearSecret');
+    const clearBtn = $home('#admin-clearSecret');
     if (clearBtn) clearBtn.onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
-    const loadBtn = $home('#load');
+    const loadBtn = $home('#admin-load');
     if (loadBtn) loadBtn.onclick = async () => {
       window.__admin_status('加载中...');
       try {
@@ -245,7 +245,7 @@ Transfer-Encoding: chunked
       }
     };
 
-    const saveConfigBtn = $home('#save');
+    const saveConfigBtn = $home('#admin-save');
     if (saveConfigBtn) saveConfigBtn.onclick = async () => {
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ window.__admin_status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
@@ -273,15 +273,15 @@ Transfer-Encoding: chunked
     };
 
     // Payments review with default pending filter + client-side pagination
-    const paymentsStatus = sel => { const el = $home('#paymentsStatus') || document.getElementById('paymentsStatus'); if(el) el.textContent = sel; };
-    const rawResponseEl = $home('#rawResponse') || document.getElementById('rawResponse');
-    const toggleRawBtn = $home('#toggleRaw') || document.getElementById('toggleRaw');
+    const paymentsStatus = sel => { const el = $home('#admin-paymentsStatus') || document.getElementById('admin-paymentsStatus'); if(el) el.textContent = sel; };
+    const rawResponseEl = $home('#admin-rawResponse') || document.getElementById('admin-rawResponse');
+    const toggleRawBtn = $home('#admin-toggleRaw') || document.getElementById('admin-toggleRaw');
     if (toggleRawBtn) toggleRawBtn.onclick = () => {
       if(!rawResponseEl) return;
       rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none';
     };
-    const paymentsList = $home('#paymentsList') || document.getElementById('paymentsList');
-    const filterSelect = $home('#filterSelect') || document.getElementById('filterSelect');
+    const paymentsList = $home('#admin-paymentsList') || document.getElementById('admin-paymentsList');
+    const filterSelect = $home('#admin-filterSelect') || document.getElementById('admin-filterSelect');
 
     let paymentsData = []; // raw from server
     let currentFilter = 'all';
@@ -539,10 +539,10 @@ Transfer-Encoding: chunked
       }catch(e){ paymentsStatus('操作失败: ' + e.message); }
     }
 
-    const loadPaymentsBtn = $('#loadPayments');
+    const loadPaymentsBtn = $('#admin-loadPayments');
     if (loadPaymentsBtn) loadPaymentsBtn.onclick = loadPayments;
     // 打开用户管理按钮现在切换到用户标签（在合并页面内）
-    const openBtn = document.getElementById('openUsers');
+    const openBtn = document.getElementById('admin-openUsers');
     if(openBtn) openBtn.onclick = () => { tabBtnUsers.click(); };
   })();</script>
 </body>
