@@ -172,17 +172,15 @@ Transfer-Encoding: chunked
           errorDiv.style.display = '';
         });
     }
-    document.getElementById('users-search-btn').onclick = function() {
-      usersFetchList(document.getElementById('users-search-input').value);
-    };
-    document.getElementById('users-refresh-btn').onclick = function() {
-      document.getElementById('users-search-input').value = '';
-      usersFetchList('');
-    };
-    document.getElementById('users-search-input').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') usersFetchList(this.value);
-    });
-    document.getElementById('admin-users-tbody').onclick = function(e) {
+    (function(){
+      const _searchBtn = document.getElementById('users-search-btn');
+      const _refreshBtn = document.getElementById('users-refresh-btn');
+      const _searchInput = document.getElementById('users-search-input');
+      const _adminTbody = document.getElementById('admin-users-tbody');
+      if(_searchBtn) _searchBtn.onclick = function() { usersFetchList(_searchInput && _searchInput.value); };
+      if(_refreshBtn) _refreshBtn.onclick = function() { if(_searchInput) _searchInput.value = ''; usersFetchList(''); };
+      if(_searchInput) _searchInput.addEventListener('keydown', function(e){ if(e.key === 'Enter') usersFetchList(this.value); });
+      if(_adminTbody) _adminTbody.onclick = function(e) {
       if (e.target && e.target.classList.contains('delete')) {
         const uid = e.target.getAttribute('data-uid');
         if (!uid) return;
