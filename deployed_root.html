@@ -587,12 +587,12 @@
     </script>
   </body>
   </html>
-        <label><input type="checkbox" id="pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
+        <label><input type="checkbox" id="admin-pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
       </div>
       <div style="margin-top:12px">
-        <button id="load">加载当前配置</button>
-        <button id="save" style="margin-left:8px">保存到服务器</button>
-        <span id="status" style="margin-left:12px"></span>
+        <button id="admin-load">加载当前配置</button>
+        <button id="admin-save" style="margin-left:8px">保存到服务器</button>
+        <span id="admin-status" style="margin-left:12px"></span>
       </div>
     </div>
   </div>
@@ -621,27 +621,27 @@
     window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
     if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
-    $('#saveSecret').onclick = () => {
+    $('#admin-saveSecret').onclick = () => {
         sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim());
       window.__admin_status('管理员密钥已保存到 sessionStorage');
     };
-    $('#clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
+    $('#admin-clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
-    $('#load').onclick = async () => {
-      status('加载中...');
+    $('#admin-load').onclick = async () => {
+      window.__admin_status('加载中...');
       try {
         const r = await fetch('/api/public/platform-config');
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
         if(j.displayRates) $('#displayRates').value = JSON.stringify(j.displayRates, null, 2);
         if(j.platformDeposit) $('#platformDeposit').value = JSON.stringify(j.platformDeposit, null, 2);
-        status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
+        window.__admin_status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
       } catch(e){
-        status('加载失败: ' + e.message);
+        window.__admin_status('加载失败: ' + e.message);
       }
     };
 
-    $('#save').onclick = async () => {
+    (document.getElementById('admin-save') || document.getElementById('save')).onclick = async () => {
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
