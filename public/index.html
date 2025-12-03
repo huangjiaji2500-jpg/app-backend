@@ -258,7 +258,7 @@
       };
 
       // File upload -> convert to data URL and preview
-      document.getElementById('pdFile').addEventListener('change', function(ev){
+      (document.getElementById('public-pdFile') || document.getElementById('pdFile')).addEventListener('change', function(ev){
         const f = ev.target.files && ev.target.files[0];
         if(!f) return;
         const reader = new FileReader();

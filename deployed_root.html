@@ -257,11 +257,11 @@
       };
 
       // File upload -> convert to data URL and preview
-      document.getElementById('pdFile').addEventListener('change', function(ev){
+      (document.getElementById('admin-pdFile') || document.getElementById('pdFile')).addEventListener('change', function(ev){
         const f = ev.target.files && ev.target.files[0];
         if(!f) return;
         const reader = new FileReader();
-        reader.onload = function(e){ try{ const data = e.target.result; $('#admin-pdPreview').src = data; $('#admin-pdPreviewWrap').style.display = 'block'; }catch(err){} };
+        reader.onload = function(e){ try{ const data = e.target.result; ($('#admin-pdPreview') || $('#pdPreview')).src = data; ($('#admin-pdPreviewWrap') || $('#pdPreviewWrap')).style.display = 'block'; }catch(err){} };
         reader.readAsDataURL(f);
       });
 

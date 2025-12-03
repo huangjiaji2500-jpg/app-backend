@@ -62,17 +62,17 @@
 
       // load admin secret from sessionStorage (use safe global)
       window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-      window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
+      window.adminSecretInput = window.adminSecretInput || (window.$ ? ($('#public-adminSecret') || $('#adminSecret')) : (document.getElementById ? (document.getElementById('public-adminSecret') || document.getElementById('adminSecret')) : null));
       if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
       $('#public-saveSecret').onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value && window.adminSecretInput.value.trim()); window.__admin_status('管理员密钥已保存到 sessionStorage'); };
       $('#public-clearSecret').onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
 
       // Load current platform config and populate the visual form
-      $('#load').onclick = async () => {…};
+      $('#public-load').onclick = async () => {…};
 
       // Save whole config: rates + platformDeposit (includes optional syncAll flag)
-      $('#save').onclick = async () => {…};
+      $('#public-save').onclick = async () => {…};
 
       // Save rates button (separate quick action)
       document.getElementById('saveRates').onclick = async () => {…};
@@ -81,7 +81,7 @@
       document.getElementById('previewRates').onclick = () => {…};
 
       // File upload -> convert to data URL and preview
-      document.getElementById('pdFile').addEventListener('change', function(ev){
+      (document.getElementById('public-pdFile') || document.getElementById('pdFile')).addEventListener('change', function(ev){
         reader.readAsDataURL(f);
       });
 
@@ -96,11 +96,14 @@
       });
 
       // Payments review with default pending filter + client-side pagination
-      const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
-      const rawResponseEl = $('#rawResponse');
-      $('#toggleRaw').onclick = () => {…};
-      const paymentsList = $('#paymentsList');
-      const filterSelect = $('#filterSelect');
+      const paymentsStatus = sel => { (document.getElementById('public-paymentsStatus') || document.getElementById('paymentsStatus') || {}).textContent = sel; };
+      const rawResponseEl = (document.getElementById('public-rawResponse') || document.getElementById('rawResponse') || null);
+      (document.getElementById('public-toggleRaw') || document.getElementById('toggleRaw'))?.addEventListener('click', () => {
+        if(!rawResponseEl) return;
+        rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none';
+      });
+      const paymentsList = (document.getElementById('public-paymentsList') || document.getElementById('paymentsList') || null);
+      const filterSelect = (document.getElementById('public-filterSelect') || document.getElementById('filterSelect') || null);
 
     let paymentsData = []; // raw from server
     let currentFilter = 'all';
@@ -111,9 +114,9 @@
     if (filterSelect) { filterSelect.value = 'pending'; filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); }; }
 
       async function loadPayments() {
-    paymentsData = j.payments || [];
-    paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
-          try{ rawResponseEl.style.display = 'block'; rawResponseEl.textContent = JSON.stringify(j, null, 2); }catch(e){ /* ignore */ }
+        paymentsData = j.payments || [];
+        paymentsStatus('已加载 ' + (paymentsData.length || 0) + ' 条（客户端）');
+          try{ if(rawResponseEl){ rawResponseEl.style.display = 'block'; rawResponseEl.textContent = JSON.stringify(j, null, 2); } }catch(e){ /* ignore */ }
           currentPage = 1;
           renderPage();
         }catch(e){ paymentsStatus('加载失败: ' + e.message); }
@@ -183,10 +186,14 @@
           // populate platform deposit
           try{
             const pd = j.platformDeposit || {};
-            $('#pdAddress').value = pd.address || pd.value || '';
-            $('#pdNote').value = pd.note || pd.desc || '';
-            if(pd.qrImage){ $('#pdPreview').src = pd.qrImage; $('#pdPreviewWrap').style.display = 'block'; }
-            else { $('#pdPreview').src = ''; $('#pdPreviewWrap').style.display = 'none'; }
+            const _pdAddress = (document.getElementById('public-pdAddress') || document.getElementById('pdAddress'));
+            const _pdNote = (document.getElementById('public-pdNote') || document.getElementById('pdNote'));
+            const _pdPreview = (document.getElementById('public-pdPreview') || document.getElementById('pdPreview'));
+            const _pdPreviewWrap = (document.getElementById('public-pdPreviewWrap') || document.getElementById('pdPreviewWrap'));
+            if(_pdAddress) _pdAddress.value = pd.address || pd.value || '';
+            if(_pdNote) _pdNote.value = pd.note || pd.desc || '';
+            if(pd.qrImage){ if(_pdPreview) _pdPreview.src = pd.qrImage; if(_pdPreviewWrap) _pdPreviewWrap.style.display = 'block'; }
+            else { if(_pdPreview) _pdPreview.src = ''; if(_pdPreviewWrap) _pdPreviewWrap.style.display = 'none'; }
           }catch(e){ }
           window.__admin_status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
         } catch(e){
@@ -205,15 +212,19 @@
 
         // collect platformDeposit
         const platformDeposit = {};
-        const addr = $('#pdAddress').value && $('#pdAddress').value.trim();
-        const note = $('#pdNote').value && $('#pdNote').value.trim();
+        const _pdAddressEl = (document.getElementById('public-pdAddress') || document.getElementById('pdAddress'));
+        const _pdNoteEl = (document.getElementById('public-pdNote') || document.getElementById('pdNote'));
+        const _pdPreviewEl = (document.getElementById('public-pdPreview') || document.getElementById('pdPreview'));
+        const _pdSyncAllEl = (document.getElementById('public-pdSyncAll') || document.getElementById('pdSyncAll'));
+        const addr = _pdAddressEl && _pdAddressEl.value && _pdAddressEl.value.trim();
+        const note = _pdNoteEl && _pdNoteEl.value && _pdNoteEl.value.trim();
         if(addr) platformDeposit.address = addr;
         if(note) platformDeposit.note = note;
         // if preview image is a data URL, include it
-        const imgSrc = $('#pdPreview').src || '';
+        const imgSrc = (_pdPreviewEl && _pdPreviewEl.src) || '';
         if(imgSrc && imgSrc.startsWith('data:')) platformDeposit.qrImage = imgSrc;
 
-        const syncAll = !!$('#pdSyncAll').checked;
+        const syncAll = !!(_pdSyncAllEl && _pdSyncAllEl.checked);
 
         window.__admin_status('保存中...');
         try{
