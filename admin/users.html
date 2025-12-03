@@ -16,6 +16,7 @@
 </head>
 <body>
   <h1>用户管理</h1>
+  <script>window.__admin_setStatus = window.__admin_setStatus || (txt => { const s = document.getElementById('admin-status') || document.getElementById('status'); if(s) s.textContent = txt; });</script>
   <p class="small">请在页面顶部粘贴管理员密钥并保存到 sessionStorage（键：<code>ADMIN_PANEL_SECRET</code>），然后点击“加载用户”。</p>
 
   <div style="margin-bottom:12px">
@@ -49,20 +50,21 @@
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
       window.adminSecretInput = window.adminSecretInput || (document.getElementById ? document.getElementById('adminSecret') : null);
     if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
-    document.getElementById('saveSecret').onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); document.getElementById('status').textContent = '已保存管理员密钥到 sessionStorage'; };
+    const _statusEl = (document.getElementById('admin-status') || document.getElementById('status'));
+    (document.getElementById('admin-saveSecret') || document.getElementById('saveSecret')).onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); window.__admin_setStatus('已保存管理员密钥到 sessionStorage'); };
 
     async function loadUsers(){
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
-      if(!secret){ document.getElementById('status').textContent = '缺少管理员密钥'; return; }
-      document.getElementById('status').textContent = '加载中...';
+      if(!secret){ window.__admin_setStatus('缺少管理员密钥'); return; }
+      window.__admin_setStatus('加载中...');
       try{
         const r = await fetch('/api/admin/users', { headers: { 'x-admin-secret': secret } });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
         if(!j.ok) throw new Error(j.error || 'unknown');
         renderUsers(j.users || []);
-        document.getElementById('status').textContent = `已加载 ${j.count || (j.users||[]).length} 位用户`;
-      }catch(e){ document.getElementById('status').textContent = '加载失败: ' + e.message; }
+        window.__admin_setStatus('已加载 ' + (j.count || (j.users||[]).length) + ' 位用户');
+      }catch(e){ window.__admin_setStatus('加载失败: ' + e.message); }
     }
 
     function fmt(d){ try{ return d ? new Date(d).toLocaleString() : '-'; }catch(e){ return d; } }
@@ -87,7 +89,7 @@
     }
 
     document.getElementById('loadUsers').onclick = loadUsers;
-    document.getElementById('q').oninput = () => { /* if table loaded, filter */ const tbody = document.getElementById('usersBody'); if(tbody && tbody.childElementCount) loadUsers(); };
+    (document.getElementById('admin-q') || document.getElementById('q')).oninput = () => { /* if table loaded, filter */ const tbody = (document.getElementById('admin-usersBody') || document.getElementById('usersBody')); if(tbody && tbody.childElementCount) loadUsers(); };
 
     // If adminSecret present open automatically to saved value
     if(sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY)) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY);
@@ -95,8 +97,8 @@
     // Fetch single user detail
     async function fetchUserDetail(id){
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
-      if(!secret){ document.getElementById('status').textContent = '缺少管理员密钥'; return; }
-      document.getElementById('status').textContent = '加载用户详情...';
+      if(!secret){ window.__admin_setStatus('缺少管理员密钥'); return; }
+      window.__admin_setStatus('加载用户详情...');
       try{
         const r = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
@@ -106,8 +108,8 @@
         document.getElementById('modalTitle').textContent = '用户详情 — ' + (j.user && (j.user.username || j.user._id || j.user.id) || id);
         document.getElementById('modalBody').textContent = JSON.stringify(j.user || j, null, 2);
         document.getElementById('modal').style.display = 'flex';
-        document.getElementById('status').textContent = '';
-      }catch(e){ document.getElementById('status').textContent = '加载详情失败: ' + e.message; }
+        window.__admin_setStatus('');
+      }catch(e){ window.__admin_setStatus('加载详情失败: ' + e.message); }
     }
 
     document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
@@ -129,7 +131,7 @@
         if(!j.ok) throw new Error(j.error || 'unknown');
         alert('操作成功');
         loadUsers();
-      }catch(e){ document.getElementById('status').textContent = '操作失败: ' + e.message; }
+      }catch(e){ window.__admin_setStatus('操作失败: ' + e.message); }
     }
 
     // Reset password
@@ -149,20 +151,20 @@
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
       window.adminSecretInput = window.adminSecretInput || (document.getElementById ? document.getElementById('adminSecret') : null);
     if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
-    document.getElementById('saveSecret').onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); document.getElementById('status').textContent = '已保存管理员密钥到 sessionStorage'; };
+    (document.getElementById('admin-saveSecret') || document.getElementById('saveSecret')).onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); window.__admin_setStatus('已保存管理员密钥到 sessionStorage'); };
 
     async function loadUsers(){
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
-      if(!secret){ document.getElementById('status').textContent = '缺少管理员密钥'; return; }
-      document.getElementById('status').textContent = '加载中...';
+      if(!secret){ window.__admin_setStatus('缺少管理员密钥'); return; }
+      window.__admin_setStatus('加载中...');
       try{
         const r = await fetch('/api/admin/users', { headers: { 'x-admin-secret': secret } });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
         if(!j.ok) throw new Error(j.error || 'unknown');
         renderUsers(j.users || []);
-        document.getElementById('status').textContent = `已加载 ${j.count || (j.users||[]).length} 位用户`;
-      }catch(e){ document.getElementById('status').textContent = '加载失败: ' + e.message; }
+        window.__admin_setStatus('已加载 ' + (j.count || (j.users||[]).length) + ' 位用户');
+      }catch(e){ window.__admin_setStatus('加载失败: ' + e.message); }
     }
 
     function fmt(d){ try{ return d ? new Date(d).toLocaleString() : '-'; }catch(e){ return d; } }
@@ -195,8 +197,8 @@
     // Fetch single user detail
     async function fetchUserDetail(id){
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
-      if(!secret){ document.getElementById('status').textContent = '缺少管理员密钥'; return; }
-      document.getElementById('status').textContent = '加载用户详情...';
+      if(!secret){ window.__admin_setStatus('缺少管理员密钥'); return; }
+      window.__admin_setStatus('加载用户详情...');
       try{
         const r = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
@@ -206,11 +208,10 @@
         document.getElementById('modalTitle').textContent = '用户详情 — ' + (j.user && (j.user.username || j.user._id || j.user.id) || id);
         document.getElementById('modalBody').textContent = JSON.stringify(j.user || j, null, 2);
         document.getElementById('modal').style.display = 'flex';
-        document.getElementById('status').textContent = '';
-      }catch(e){ document.getElementById('status').textContent = '加载详情失败: ' + e.message; }
+        window.__admin_setStatus('');
+      }catch(e){ window.__admin_setStatus('加载详情失败: ' + e.message); }
     }
-
-    document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
+    (document.getElementById('admin-modalClose') || document.getElementById('modalClose')).onclick = () => { (document.getElementById('admin-modal') || document.getElementById('modal')).style.display = 'none'; };
     
     // Toggle disable/enable
     async function toggleDisable(id, btn){
@@ -222,7 +223,7 @@
         const r0 = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
         if(!r0.ok) throw new Error(r0.status + ' ' + r0.statusText);
         loadUsers();
-      }catch(e){ document.getElementById('status').textContent = '操作失败: ' + e.message; }
+      }catch(e){ window.__admin_setStatus('操作失败: ' + e.message); }
     }
 
     // Reset password
@@ -239,7 +240,7 @@
   if(temp) alert('已生成临时密码（仅显示一次）：\n' + temp + '\n\n请立即复制并转交给用户；页面不会再次显示该明文密码。');
   else alert('已标记为需要重置密码（未返回临时密码）');
         loadUsers();
-      }catch(e){ document.getElementById('status').textContent = '操作失败: ' + e.message; }
+      }catch(e){ window.__admin_setStatus('操作失败: ' + e.message); }
     }
   })();
   </script>

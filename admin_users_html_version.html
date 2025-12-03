@@ -49,20 +49,21 @@
     window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
     window.adminSecretInput = window.adminSecretInput || (document.getElementById ? document.getElementById('adminSecret') : null);
     if(window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
-    document.getElementById('saveSecret').onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); document.getElementById('status').textContent = '已保存管理员密钥到 sessionStorage'; };
+    const _statusEl = (document.getElementById('admin-status') || document.getElementById('status'));
+    (document.getElementById('admin-saveSecret') || document.getElementById('saveSecret')).onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); if(_statusEl) _statusEl.textContent = '已保存管理员密钥到 sessionStorage'; };
 
     async function loadUsers(){
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
-      if(!secret){ document.getElementById('status').textContent = '缂哄皯绠＄悊鍛樺瘑閽?; return; }
-      document.getElementById('status').textContent = '鍔犺浇涓?..';
+      if(!secret){ if(_statusEl) _statusEl.textContent = '缺少管理员密钥'; return; }
+      if(_statusEl) _statusEl.textContent = '加载中...';
       try{
         const r = await fetch('/api/admin/users', { headers: { 'x-admin-secret': secret } });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
         if(!j.ok) throw new Error(j.error || 'unknown');
         renderUsers(j.users || []);
-        document.getElementById('status').textContent = `宸插姞杞?${j.count || (j.users||[]).length} 浣嶇敤鎴穈;
-      }catch(e){ document.getElementById('status').textContent = '鍔犺浇澶辫触: ' + e.message; }
+        if(_statusEl) _statusEl.textContent = '已加载 ' + (j.count || (j.users||[]).length) + ' 位用户';
+      }catch(e){ if(_statusEl) _statusEl.textContent = '加载失败: ' + e.message; }
     }
 
     function fmt(d){ try{ return d ? new Date(d).toLocaleString() : '-'; }catch(e){ return d; } }
@@ -86,8 +87,8 @@
       document.querySelectorAll('.resetBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); resetPassword(id); });
     }
 
-    document.getElementById('loadUsers').onclick = loadUsers;
-    document.getElementById('q').oninput = () => { /* if table loaded, filter */ const tbody = document.getElementById('usersBody'); if(tbody && tbody.childElementCount) loadUsers(); };
+    (document.getElementById('admin-loadUsers') || document.getElementById('loadUsers')).onclick = loadUsers;
+    (document.getElementById('admin-q') || document.getElementById('q')).oninput = () => { /* if table loaded, filter */ const tbody = (document.getElementById('admin-usersBody') || document.getElementById('usersBody')); if(tbody && tbody.childElementCount) loadUsers(); };
 
     // If adminSecret present open automatically to saved value
     if(sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY)) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY);
@@ -95,22 +96,22 @@
     // Fetch single user detail
     async function fetchUserDetail(id){
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
-      if(!secret){ document.getElementById('status').textContent = '缂哄皯绠＄悊鍛樺瘑閽?; return; }
-      document.getElementById('status').textContent = '鍔犺浇鐢ㄦ埛璇︽儏...';
+      if(!secret){ if(_statusEl) _statusEl.textContent = '缺少管理员密钥'; return; }
+      if(_statusEl) _statusEl.textContent = '加载用户详情...';
       try{
         const r = await fetch('/api/admin/users?id=' + encodeURIComponent(id), { headers: { 'x-admin-secret': secret } });
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
         const j = await r.json();
         if(!j.ok) throw new Error(j.error || 'unknown');
         // show in modal
-        document.getElementById('modalTitle').textContent = '鐢ㄦ埛璇︽儏 鈥?' + (j.user && (j.user.username || j.user._id || j.user.id) || id);
-        document.getElementById('modalBody').textContent = JSON.stringify(j.user || j, null, 2);
-        document.getElementById('modal').style.display = 'flex';
-        document.getElementById('status').textContent = '';
-      }catch(e){ document.getElementById('status').textContent = '鍔犺浇璇︽儏澶辫触: ' + e.message; }
+        (document.getElementById('admin-modalTitle') || document.getElementById('modalTitle')).textContent = '用户详情 — ' + (j.user && (j.user.username || j.user._id || j.user.id) || id);
+        (document.getElementById('admin-modalBody') || document.getElementById('modalBody')).textContent = JSON.stringify(j.user || j, null, 2);
+        (document.getElementById('admin-modal') || document.getElementById('modal')).style.display = 'flex';
+        if(_statusEl) _statusEl.textContent = '';
+      }catch(e){ if(_statusEl) _statusEl.textContent = '加载详情失败: ' + e.message; }
     }
 
-    document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
+    (document.getElementById('admin-modalClose') || document.getElementById('modalClose')).onclick = () => { (document.getElementById('admin-modal') || document.getElementById('modal')).style.display = 'none'; };
     
     // Toggle disable/enable
     async function toggleDisable(id, btn){
@@ -129,7 +130,7 @@
         if(!j.ok) throw new Error(j.error || 'unknown');
         alert('鎿嶄綔鎴愬姛');
         loadUsers();
-      }catch(e){ document.getElementById('status').textContent = '鎿嶄綔澶辫触: ' + e.message; }
+      }catch(e){ if(_statusEl) _statusEl.textContent = '操作失败: ' + e.message; }
     }
 
     // Reset password
@@ -146,7 +147,7 @@
   if(temp) alert('宸茬敓鎴愪复鏃跺瘑鐮侊紙浠呮樉绀轰竴娆★級锛歕n' + temp + '\n\n璇风珛鍗冲鍒跺苟杞氦缁欑敤鎴凤紱椤甸潰涓嶄細鍐嶆鏄剧ず璇ユ槑鏂囧瘑鐮併€?);
   else alert('宸叉爣璁颁负闇€瑕侀噸缃瘑鐮侊紙鏈繑鍥炰复鏃跺瘑鐮侊級');
         loadUsers();
-      }catch(e){ document.getElementById('status').textContent = '鎿嶄綔澶辫触: ' + e.message; }
+      }catch(e){ window.__admin_setStatus && window.__admin_setStatus('操作失败: ' + e.message); }
     }
     })();
   </script>
