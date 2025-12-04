@@ -23,8 +23,22 @@
       // noop placeholders for optional buttons — assign handlers later when elements exist
     })();
   </script>
-      <div style="margin-bottom:8px"><label>备注说明</label><br/><input id="pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
+      <!-- 管理员密钥（保存到 sessionStorage） -->
+      <div style="margin-bottom:8px">
+        <label for="adminSecret">管理员密钥</label><br/>
+        <input id="adminSecret" style="width:70%" placeholder="粘贴管理员密钥并点击 保存到 sessionStorage" />
+        <button id="admin-saveSecret" style="margin-left:6px">保存到 sessionStorage</button>
+        <button id="admin-clearSecret" style="margin-left:6px">清除</button>
+      </div>
+
+      <!-- 平台收款地址 -->
+      <div style="margin-bottom:8px">
+        <label for="pdAddress">收款地址</label><br/>
+        <input id="pdAddress" style="width:100%" placeholder="例如：TRC20 地址" />
+      </div>
+
       <!-- QR upload removed to simplify admin; only address and note are kept -->
+      <div style="margin-bottom:8px"><label for="pdNote">备注说明</label><br/><input id="pdNote" name="pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
       <div style="margin-top:6px">
         <label><input type="checkbox" id="pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
       </div>
