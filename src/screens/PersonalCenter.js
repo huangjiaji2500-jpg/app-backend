@@ -124,8 +124,8 @@ export default function PersonalCenter({ navigation }) {
         </View>
         <Text style={{ marginTop:8, fontSize:12, color:'#757575' }}>{t('address_status')}：{snapshot.walletStatus === 'approved' ? t('address_status_passed') : snapshot.walletStatus === 'pending_review' ? t('address_status_pending') : t('address_not_submitted')}</Text>
         <Text style={{ marginTop:2, fontSize:12, color:'#757575' }}>{t('current_user')}：{username}</Text>
-        {/* Debug info: server-side returned topupBalance and current API baseURL */}
-        {meDebug ? (
+        {/* Debug info: server-side returned topupBalance and current API baseURL - only show in dev or for admins */}
+        {(meDebug && (typeof __DEV__ !== 'undefined' && __DEV__ || isAdmin)) ? (
           <Text style={{ marginTop:2, fontSize:12, color:'#9E9E9E' }}>server topup: {meDebug.serverUser ? String(meDebug.serverUser.topupBalance) : '-'}  ·  api: {meDebug.baseURL || 'unknown'}</Text>
         ) : null}
       </View>

@@ -57,8 +57,9 @@ export default function Login({ navigation }) {
           value={password}
           onChangeText={setPassword}
           placeholder={t('password_placeholder') || '至少6位，含字母+数字'}
-          secureTextEntry
-          style={[styles.input, { borderColor: colors.border, borderRadius: borderRadius.md }]}
+          placeholderTextColor="#9E9E9E"
+          secureTextEntry={true}
+          style={[styles.input, { borderColor: colors.border, borderRadius: borderRadius.md, color: colors.text }]}
         />
       </View>
 

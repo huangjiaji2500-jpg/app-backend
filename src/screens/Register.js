@@ -104,8 +104,9 @@ export default function Register({ navigation, route }) {
           value={password}
           onChangeText={onPasswordChange}
           placeholder={t('password_placeholder')}
-          secureTextEntry
-          style={[styles.input, { borderColor: colors.border, borderRadius: borderRadius.md }]}
+          placeholderTextColor="#9E9E9E"
+          secureTextEntry={true}
+          style={[styles.input, { borderColor: colors.border, borderRadius: borderRadius.md, color: colors.text }]}
         />
         {!!passwordHint && <Text style={{ marginTop: 6, color: '#E53935' }}>{passwordHint}</Text>}
       </View>

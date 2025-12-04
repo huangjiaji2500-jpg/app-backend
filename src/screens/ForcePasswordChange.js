@@ -35,17 +35,19 @@ export default function ForcePasswordChange({ navigation }) {
         <TextInput
           value={pwd}
           onChangeText={setPwd}
-          secureTextEntry
+          secureTextEntry={true}
           placeholder={t('password_placeholder') || '至少6位，含字母+数字'}
-          style={{ marginTop:6, height:44, borderWidth:1, borderColor: colors.border, borderRadius:8, paddingHorizontal:12, backgroundColor:'#FAFAFA' }}
+          placeholderTextColor="#9E9E9E"
+          style={{ marginTop:6, height:44, borderWidth:1, borderColor: colors.border, borderRadius:8, paddingHorizontal:12, backgroundColor:'#FAFAFA', color: colors.text }}
         />
         <Text style={{ marginTop:16 }}>{t('confirm_new_password_label') || '确认新密码'}</Text>
         <TextInput
           value={pwd2}
           onChangeText={setPwd2}
-          secureTextEntry
+          secureTextEntry={true}
           placeholder={t('password_placeholder') || '至少6位，含字母+数字'}
-          style={{ marginTop:6, height:44, borderWidth:1, borderColor: colors.border, borderRadius:8, paddingHorizontal:12, backgroundColor:'#FAFAFA' }}
+          placeholderTextColor="#9E9E9E"
+          style={{ marginTop:6, height:44, borderWidth:1, borderColor: colors.border, borderRadius:8, paddingHorizontal:12, backgroundColor:'#FAFAFA', color: colors.text }}
         />
         <PrimaryButton title={t('save') || '保存'} onPress={onSubmit} loading={loading} style={{ marginTop:20 }} />
       </View>

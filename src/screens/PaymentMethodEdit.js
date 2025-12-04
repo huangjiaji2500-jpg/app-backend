@@ -113,6 +113,7 @@ export default function PaymentMethodEdit({ route, navigation }) {
           value={localValue}
           onChangeText={handleLocalChange}
           placeholder={placeholder}
+          placeholderTextColor="#9E9E9E"
           keyboardType={keyboardType}
           secureTextEntry={!!secure}
           autoCapitalize="none"
@@ -121,7 +122,7 @@ export default function PaymentMethodEdit({ route, navigation }) {
           returnKeyType="done"
           onFocus={handleFocus}
           onBlur={handleBlur}
-          style={{ height:44, borderWidth:1, borderColor:colors.border, borderRadius:8, paddingHorizontal:10 }}
+          style={{ height:44, borderWidth:1, borderColor:colors.border, borderRadius:8, paddingHorizontal:10, color: colors.text }}
         />
       </View>
     );

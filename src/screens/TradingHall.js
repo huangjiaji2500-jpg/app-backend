@@ -137,6 +137,7 @@ export default function TradingHall({ navigation }) {
             keyExtractor={(item, idx) => item._id || item.id || String(idx)}
             renderItem={renderItem}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            contentContainerStyle={{ paddingBottom: 86 }}
           />
         )}
       </View>
