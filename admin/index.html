@@ -6,110 +6,24 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>平台配置（管理员）</title>
-  <style>
-    body{font-family:system-ui,Segoe UI,Arial;margin:20px}
-    textarea{width:100%;height:120px;font-family:monospace}
-    .row{margin-bottom:12px}
-    label{font-weight:600}
-    <script>
+  </style>
+  <script>
+    // Minimal safe admin helpers — avoid accessing missing DOM nodes to prevent runtime errors
     (function(){
       window.$ = window.$ || (sel => document.querySelector(sel));
-      window.__admin_status = window.__admin_status || (txt => { $('#status').textContent = txt; });
-
-      // load admin secret from sessionStorage (use safe global to avoid duplicate const)
+      window.__admin_status = window.__admin_status || (txt => { const s = $('#status'); if(s) s.textContent = txt; });
       window.__ADMIN_PANEL_SECRET_KEY = window.__ADMIN_PANEL_SECRET_KEY || 'ADMIN_PANEL_SECRET';
-      window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
-      if (window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
-
-      (document.getElementById('admin-saveSecret') || document.getElementById('saveSecret')).onclick = () => {…};
-      (document.getElementById('admin-clearSecret') || document.getElementById('clearSecret')).onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
-
-      // Load current platform config and populate the visual form
-      (document.getElementById('admin-load') || document.getElementById('load')).onclick = async () => {…};
-
-      // Save whole config: rates + platformDeposit (includes optional syncAll flag)
-      (document.getElementById('admin-save') || document.getElementById('save')).onclick = async () => {…};
-
-      // Save rates button (separate quick action)
-      document.getElementById('saveRates').onclick = async () => {…};
-
-      // Preview rates
-      document.getElementById('previewRates').onclick = () => {…};
-
-      // File upload -> convert to data URL and preview
-      document.getElementById('pdFile').addEventListener('change', function(ev){
-        reader.readAsDataURL(f);
-      });
-
-      // Onboarding modal
-      const onboardKey = 'ADMIN_ONBOARDED_V1';
-      document.getElementById('onboardClose').onclick = () => { sessionStorage.setItem(onboardKey, '1'); document.getElementById('onboardModal').style.display = 'none'; };
-      // show onboarding if first run
-      (function(){ try{ if(!sessionStorage.getItem(onboardKey)) { document.getElementById('onboardModal').style.display = 'flex'; } }catch(e){} })();
-    
-
-      // Auto-load payments & users when admin secret present on page load
-      window.addEventListener('load', () => {…}catch(e){}
-      });
-
-      // Payments review with default pending filter + client-side pagination
-      const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
-      const rawResponseEl = $('#rawResponse');
-      $('#toggleRaw').onclick = () => {…};
-      const paymentsList = $('#paymentsList');
-      const filterSelect = $('#filterSelect');
-
-    let paymentsData = []; // raw from server
-    let currentFilter = 'all';
-      let pageSize = 8;
-      let currentPage = 1;
-
-    // 默认只显示待审核项
-    if (filterSelect) { filterSelect.value = 'pending'; filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); }; }
-
-      async function loadPayments() {…}
-
-      // 如果后端不可用，尝试回退到本地模拟数据文件（仅用于本地测试）
-      async function loadLocalFallback(){…}
-
-      function fmtDate(d){ try{ return new Date(d).toLocaleString(); }catch(e){ return d; } }
-    // 状态映射，用于在 UI 中显示中文状态
-    const statusMap = { pending: '待审核', approved: '已通过', rejected: '已拒绝' };
-    function statusText(s){ return statusMap[s] || s || ''; }
-
-      // robust helpers: extract display amount and proof image from heterogeneous records
-      function getAmount(rec){…}
-
-      function getProofSrc(rec){…}
-
-      function renderPage(){…}
-
-      async function handleAction(id, action, adminNote, amountApprovedUSDT){
-        const actionMap = { approved: '通过', rejected: '拒绝' };
-    const ok = confirm('确定要将凭证 ' + id + ' 标为: ' + (actionMap[action] || action) + ' ？');
-        if(!ok) return;
-        paymentsStatus('提交中...');
-        const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
-        try{
-          await loadPayments();
-        }catch(e){ paymentsStatus('操作失败: ' + e.message); }
-      }
-
-      (document.getElementById('admin-loadPayments') || document.getElementById('loadPayments')).onclick = loadPayments;
-      // 打开用户管理区（滚动到页面内）
-      const openBtn = document.getElementById('openUsers');
-      if(openBtn) openBtn.onclick = () => { const s = document.getElementById('usersSection'); if(s) s.scrollIntoView({behavior:'smooth'}); };
+      // safe getter
+      function safeById(id){ try{ return document.getElementById(id); }catch(e){ return null; } }
+      window.safeById = safeById;
+      // set admin input if present
+      const adminSecretEl = safeById('adminSecret');
+      try{ if(adminSecretEl) adminSecretEl.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || ''; }catch(e){}
+      // noop placeholders for optional buttons — assign handlers later when elements exist
     })();
-    </script>
+  </script>
       <div style="margin-bottom:8px"><label>备注说明</label><br/><input id="pdNote" style="width:100%" placeholder="例如：仅接收 USDT (TRC20)" /></div>
-      <div style="margin-bottom:8px">
-        <label>上传二维码图片（PNG/JPG）</label><br/>
-        <input type="file" id="pdFile" accept="image/png,image/jpeg" />
-        <div id="pdPreviewWrap" style="margin-top:8px;display:none">
-          <div class="small">图片预览：</div>
-          <img id="pdPreview" src="" style="max-width:320px;border:1px solid #ddd;padding:6px;background:#fff" />
-        </div>
-      </div>
+      <!-- QR upload removed to simplify admin; only address and note are kept -->
       <div style="margin-top:6px">
         <label><input type="checkbox" id="pdSyncAll" /> 一键同步到所有用户端（将写入 sync_items）</label>
       </div>
@@ -145,15 +59,11 @@
     window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
     if (window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
-    (document.getElementById('admin-saveSecret') || document.getElementById('saveSecret')).onclick = () => {
-      sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim());
-      window.__admin_status('管理员密钥已保存到 sessionStorage');
-    };
-    (document.getElementById('admin-clearSecret') || document.getElementById('clearSecret')).onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); };
+    (function(){ const btn = document.getElementById('admin-saveSecret') || document.getElementById('saveSecret'); if(btn){ btn.onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); window.__admin_status('管理员密钥已保存到 sessionStorage'); }; } })();
+    (function(){ const btn = document.getElementById('admin-clearSecret') || document.getElementById('clearSecret'); if(btn){ btn.onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); }; } })();
 
     // Load current platform config and populate the visual form
-    (document.getElementById('admin-load') || document.getElementById('load')).onclick = async () => {
-      status('加载中...');
+    (function(){ const btn = document.getElementById('admin-load') || document.getElementById('load'); if(btn){ btn.onclick = async () => { status('加载中...');
       try {
         const r = await fetch('/api/public/platform-config');
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
@@ -168,17 +78,19 @@
           const pd = j.platformDeposit || {};
           $('#pdAddress').value = pd.address || pd.value || '';
           $('#pdNote').value = pd.note || pd.desc || '';
-          if(pd.qrImage){ $('#pdPreview').src = pd.qrImage; $('#pdPreviewWrap').style.display = 'block'; }
-          else { $('#pdPreview').src = ''; $('#pdPreviewWrap').style.display = 'none'; }
+          // set preview only if element exists (we removed file upload in simplified admin)
+          try{
+            const pdPreviewEl = document.getElementById('pdPreview');
+            const pdPreviewWrap = document.getElementById('pdPreviewWrap');
+            if(pdPreviewEl){ if(pd.qrImage){ pdPreviewEl.src = pd.qrImage; if(pdPreviewWrap) pdPreviewWrap.style.display = 'block'; } else { pdPreviewEl.src = ''; if(pdPreviewWrap) pdPreviewWrap.style.display = 'none'; } }
+          }catch(e){}
         }catch(e){ }
         status('已加载最新配置（来自: ' + (j.debug && j.debug.source ? j.debug.source : 'unknown') + ')');
-      } catch(e){
-        status('加载失败: ' + e.message);
-      }
-    };
+      } catch(e){ status('加载失败: ' + e.message); }
+    }; } })();
 
     // Save whole config: rates + platformDeposit (includes optional syncAll flag)
-    (document.getElementById('admin-save') || document.getElementById('save')).onclick = async () => {
+    (function(){ const btn = document.getElementById('admin-save') || document.getElementById('save'); if(btn){ btn.onclick = async () => {
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
@@ -193,7 +105,8 @@
       if(addr) platformDeposit.address = addr;
       if(note) platformDeposit.note = note;
       // if preview image is a data URL, include it
-      const imgSrc = $('#pdPreview').src || '';
+      const pdPrev = document.getElementById('pdPreview');
+      const imgSrc = pdPrev ? (pdPrev.src || '') : '';
       if(imgSrc && imgSrc.startsWith('data:')) platformDeposit.qrImage = imgSrc;
 
       const syncAll = !!$('#pdSyncAll').checked;
@@ -211,44 +124,32 @@
         const j = await r.json().catch(()=>({ok:false}));
         if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
         status('保存成功');
-      }catch(e){
-        status('保存失败: ' + e.message);
-      }
-    };
+      }catch(e){ status('保存失败: ' + e.message); }
+    }; } )();
 
     // Save rates button (separate quick action)
-    document.getElementById('saveRates').onclick = async () => {
+    (function(){ const btn = document.getElementById('saveRates'); if(btn){ btn.onclick = async () => {
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
-      if(!secret){ document.getElementById('ratesStatus').textContent = '缺少管理员密钥'; return; }
+      if(!secret){ if(document.getElementById('ratesStatus')) document.getElementById('ratesStatus').textContent = '缺少管理员密钥'; return; }
       const displayRates = {};
       document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) displayRates[k] = v; });
-      document.getElementById('ratesStatus').textContent = '保存中...';
+      if(document.getElementById('ratesStatus')) document.getElementById('ratesStatus').textContent = '保存中...';
       try{
         const r = await fetch('/api/admin/set-platform-config', { method:'POST', headers: { 'content-type':'application/json', 'x-admin-secret': secret }, body: JSON.stringify({ displayRates }) });
         const j = await r.json().catch(()=>({ok:false})); if(!r.ok) throw new Error((j && j.error) ? j.error : r.status + ' ' + r.statusText);
-        document.getElementById('ratesStatus').textContent = '保存成功';
-      }catch(e){ document.getElementById('ratesStatus').textContent = '保存失败: ' + e.message; }
-    };
+        if(document.getElementById('ratesStatus')) document.getElementById('ratesStatus').textContent = '保存成功';
+      }catch(e){ if(document.getElementById('ratesStatus')) document.getElementById('ratesStatus').textContent = '保存失败: ' + e.message; }
+    }; } })();
 
     // Preview rates
-    document.getElementById('previewRates').onclick = () => {
-      const preview = {};
-      document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) preview[k] = v; });
-      const el = document.getElementById('ratesPreview'); el.style.display = 'block'; el.textContent = '当前预览: ' + JSON.stringify(preview, null, 2);
-    };
+    (function(){ const btn = document.getElementById('previewRates'); if(btn){ btn.onclick = () => { const preview = {}; document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) preview[k] = v; }); const el = document.getElementById('ratesPreview'); if(el){ el.style.display = 'block'; el.textContent = '当前预览: ' + JSON.stringify(preview, null, 2); } }; } )();
 
     // File upload -> convert to data URL and preview
-    document.getElementById('pdFile').addEventListener('change', function(ev){
-      const f = ev.target.files && ev.target.files[0];
-      if(!f) return;
-      const reader = new FileReader();
-      reader.onload = function(e){ try{ const data = e.target.result; $('#pdPreview').src = data; $('#pdPreviewWrap').style.display = 'block'; }catch(err){} };
-      reader.readAsDataURL(f);
-    });
+    // pdFile upload removed in simplified admin UI
 
     // Onboarding modal
     const onboardKey = 'ADMIN_ONBOARDED_V1';
-    document.getElementById('onboardClose').onclick = () => { sessionStorage.setItem(onboardKey, '1'); document.getElementById('onboardModal').style.display = 'none'; };
+    (function(){ const btn = document.getElementById('onboardClose'); if(btn){ btn.onclick = () => { sessionStorage.setItem(onboardKey, '1'); const m = document.getElementById('onboardModal'); if(m) m.style.display = 'none'; }; } })();
     // show onboarding if first run
     (function(){ try{ if(!sessionStorage.getItem(onboardKey)) { document.getElementById('onboardModal').style.display = 'flex'; } }catch(e){} })();
 
@@ -265,10 +166,7 @@
     // Payments review with default pending filter + client-side pagination
     const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
     const rawResponseEl = $('#rawResponse');
-    $('#toggleRaw').onclick = () => {
-      if(!rawResponseEl) return;
-      rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none';
-    };
+    (function(){ const t = $('#toggleRaw'); if(t){ t.onclick = () => { if(!rawResponseEl) return; rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none'; }; } })();
     const paymentsList = $('#paymentsList');
     const filterSelect = $('#filterSelect');
 
@@ -395,231 +293,51 @@
     }
 
     function renderPage(){
-      if(!paymentsData || !paymentsData.length){ paymentsList.innerHTML = '<div class="small">没有充值凭证。</div>'; return; }
-      // apply filter (尊重 payload.item.status / payload.status / top-level status)
+      const listEl = document.getElementById('paymentsList');
+      if(!listEl) return;
+      if(!paymentsData || !paymentsData.length){ listEl.innerHTML = '<div class="small">没有充值凭证。</div>'; return; }
+      // show filtered pending by default
       const filtered = paymentsData.filter(it => {
-        if(currentFilter === 'pending'){
-          const p = it && it.payload ? it.payload : {};
-          const item = p.item || p.deposit || p || {};
-          const st = (it && it.status) || item.status || p.status || 'pending';
-          return st === 'pending';
-        }
+        const p = it && it.payload ? it.payload : {};
+        const item = p.item || p.deposit || p || {};
+        const st = (it && it.status) || item.status || p.status || 'pending';
+        if(currentFilter === 'pending') return st === 'pending';
         return true;
       });
-      const total = filtered.length;
-      const pageCount = Math.max(1, Math.ceil(total / pageSize));
-      if(currentPage > pageCount) currentPage = pageCount;
-      const start = (currentPage - 1) * pageSize;
-      const pageItems = filtered.slice(start, start + pageSize);
-
-      paymentsList.innerHTML = '';
-      if(!pageItems.length){ paymentsList.innerHTML = '<div class="small">此页无数据。</div>'; }
-      pageItems.forEach(it => {
-        const wrap = document.createElement('div');
-        wrap.style.border = '1px solid #ddd';
-        wrap.style.padding = '10px';
-        wrap.style.marginBottom = '8px';
-
-        // 兼容多种数据形态，优先使用 payload.item（或 payload.deposit.item）或嵌套的 item
+      listEl.innerHTML = '';
+      filtered.forEach(it => {
         const payload = (it && it.payload) || {};
         const item = payload.item || (payload.deposit && payload.deposit.item) || payload.deposit || payload || {};
         const username = item.username || item.user || it.username || it.uid || payload.username || '未知';
-        // Compute displayed amount with robust fallback (front-end only, no DB writes)
-        const amount = getAmount(it);
-        // compute proof url early so debug lines can reference it
-        const receiptUrl = getProofSrc(it);
+        const amount = getAmount(it) || 0;
         const docId = it._id || it.id || (item.id || payload.id) || '-';
-        const createdRaw = it.receivedAt || it.createdAt || payload.receivedAt || payload.createdAt || item.createdAt || item.ts || item.time || payload.ts || null;
-        const created = createdRaw ? fmtDate(createdRaw) : '-';
 
-        const title = document.createElement('div');
-        title.innerHTML = `<strong>用户：</strong> ${username} &nbsp; | &nbsp; <strong>充值金额：</strong> ${amount} USDT &nbsp; | &nbsp; <strong>创建时间：</strong> ${created}`;
+        const row = document.createElement('div');
+        row.style.border = '1px solid #ddd'; row.style.padding = '10px'; row.style.marginBottom = '8px';
+        const info = document.createElement('div');
+        info.innerHTML = `<strong>用户ID:</strong> ${username} &nbsp; | &nbsp; <strong>USDT:</strong> ${amount}`;
+        row.appendChild(info);
 
-        const meta = document.createElement('div');
-        meta.className = 'small';
-        meta.style.marginTop = '6px';
-        meta.textContent = `记录ID: ${docId}  状态: ${statusText(it.status || (item.status || payload.status) || 'pending')}`;
-        wrap.appendChild(title);
-        wrap.appendChild(meta);
-
-        // --- Debug: add "查看原始" 按钮 和 简要调试字段，帮助定位为何金额为 0 ---
-        try{
-          const viewRawBtn = document.createElement('button');
-          viewRawBtn.textContent = '查看原始';
-          viewRawBtn.style.marginLeft = '8px';
-          viewRawBtn.onclick = () => {
-            try{
-              document.getElementById('modalTitle').textContent = '凭证原始 - ' + docId;
-              document.getElementById('modalBody').textContent = JSON.stringify(it, null, 2);
-              document.getElementById('modal').style.display = 'flex';
-            }catch(e){ alert('无法展示原始数据: ' + e.message); }
-          };
-          meta.appendChild(viewRawBtn);
-
-          const debugDiv = document.createElement('div');
-          debugDiv.className = 'small';
-          debugDiv.style.marginTop = '6px';
-          // show multiple candidate fields so admin can see which path is empty
-          const debugText = 'debug: payload.amount=' + (payload && (payload.amount || ''))
-            + '  payload.status=' + (payload && payload.status || '')
-            + '  item.amountRequestedUSDT=' + (item && (item.amountRequestedUSDT || ''))
-            + '  item.amountApprovedUSDT=' + (item && (item.amountApprovedUSDT || ''))
-            + '  receipt=' + (receiptUrl ? 'present' : 'missing');
-          debugDiv.textContent = debugText;
-          wrap.appendChild(debugDiv);
-        }catch(e){ /* safe ignore debug helpers on any error */ }
-
-        // 充值凭证预览区域（更清晰的展示）
-        const previewWrap = document.createElement('div');
-        previewWrap.style.marginTop = '8px';
-        const previewLabel = document.createElement('div');
-        previewLabel.className = 'small';
-        previewLabel.style.fontWeight = '600';
-        previewLabel.textContent = '充值凭证预览：';
-        previewWrap.appendChild(previewLabel);
-        if(receiptUrl){
-          const img = document.createElement('img');
-          img.src = receiptUrl;
-          img.alt = '充值凭证图片';
-          img.style.maxWidth = '320px';
-          img.style.display = 'block';
-          img.style.marginTop = '6px';
-          const svgPlaceholder = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-            '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180">'
-            + '<rect width="100%" height="100%" fill="#f3f3f3"/>'
-            + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" '
-            + 'font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#666">'
-            + '暂无图片或无法加载</text></svg>'
-          );
-          img.onerror = function(){ this.onerror = null; try{ this.src = svgPlaceholder; }catch(e){} };
-          previewWrap.appendChild(img);
-        } else {
-          const noImg = document.createElement('div');
-          noImg.className = 'small';
-          noImg.style.marginTop = '6px';
-          noImg.textContent = '无凭证图片。';
-          previewWrap.appendChild(noImg);
-        }
-        wrap.appendChild(previewWrap);
-        // If the payment is still pending show editable adminNote + action buttons
-        const pendingState = ((it && it.status) || (item && item.status) || (payload && payload.status) || 'pending');
-        if (pendingState === 'pending') {
-          const noteRow = document.createElement('div');
-          noteRow.style.marginTop = '8px';
-          const noteLabel = document.createElement('div');
-          noteLabel.className = 'small';
-          noteLabel.textContent = '审核备注（可选）：';
-          const noteInput = document.createElement('textarea');
-          noteInput.style.width = '100%';
-          noteInput.style.height = '60px';
-          noteInput.placeholder = '填写审核备注（例如：充值凭证清晰/金额不符等），可留空。';
-          noteRow.appendChild(noteLabel);
-          noteRow.appendChild(noteInput);
-          wrap.appendChild(noteRow);
-
-          // 允许管理员在审核时填写批准金额（USDT），若留空则使用申请金额
-          const amtRow = document.createElement('div');
-          amtRow.style.marginTop = '8px';
-          const amtLabel = document.createElement('div');
-          amtLabel.className = 'small';
-          amtLabel.style.fontWeight = '600';
-          amtLabel.textContent = '批准金额（USDT，可留空使用申请金额）：';
-          const amtInput = document.createElement('input');
-          amtInput.type = 'number';
-          amtInput.style.width = '200px';
-          // populate approve input from approved/amount/requested, also check nested item.item
-          amtInput.value = (
-            item.amountApprovedUSDT || item.amountApproved || item.amount ||
-            (item.item && (item.item.amountApprovedUSDT || item.item.amountApproved || item.item.amount)) ||
-            item.amountRequestedUSDT || item.amountRequested || ''
-          );
-          amtRow.appendChild(amtLabel);
-          amtRow.appendChild(amtInput);
-          wrap.appendChild(amtRow);
-
-          const btnRow = document.createElement('div');
-          btnRow.style.marginTop = '8px';
-          const approve = document.createElement('button');
-          approve.textContent = '通过';
-          approve.onclick = () => handleAction(docId, 'approved', noteInput.value, amtInput.value);
-          const reject = document.createElement('button');
-          reject.textContent = '拒绝';
-          reject.onclick = () => handleAction(docId, 'rejected', noteInput.value, null);
-          btnRow.appendChild(approve);
-          btnRow.appendChild(reject);
-          wrap.appendChild(btnRow);
-
-        } else {
-          // already reviewed - show readonly info
-          const info = document.createElement('div');
-          info.className = 'small';
-          info.style.marginTop = '8px';
-          const adminNoteText = (payload && payload.adminNote) || it.adminNote || '';
-          const statusVal = (it && it.status) || (item && item.status) || (payload && payload.status) || '';
-          const noteText = adminNoteText ? (' 备注：' + adminNoteText) : '';
-          info.textContent = '已审核：' + statusText(statusVal) + noteText;
-          wrap.appendChild(info);
-
-          // 如果已经审批通过，显示“删除”按钮（仅前端页面级删除）
+        const btnRow = document.createElement('div'); btnRow.style.marginTop = '8px';
+        const approve = document.createElement('button'); approve.textContent = '通过'; approve.style.marginRight='8px';
+        approve.onclick = () => handleAction(docId, 'approved', '', amount);
+        const reject = document.createElement('button'); reject.textContent = '拒绝'; reject.style.marginRight='8px';
+        reject.onclick = () => handleAction(docId, 'rejected', '', null);
+        const del = document.createElement('button'); del.textContent = '删除'; del.style.marginRight='8px';
+        del.onclick = async () => {
+          const ok = confirm('确定删除记录 ' + docId + ' ?'); if(!ok) return;
+          const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (document.getElementById('adminSecret') && document.getElementById('adminSecret').value.trim());
+          if(!secret){ alert('缺少管理员密钥'); return; }
           try{
-            // 只在明确为通过状态时展示删除按钮
-            if((statusVal || '').toString().toLowerCase() === 'approved' || (statusVal || '').toString().toLowerCase() === '已通过'){
-              const delBtn = document.createElement('button');
-              delBtn.textContent = '删除';
-              delBtn.style.marginLeft = '8px';
-              delBtn.onclick = () => {
-                const ok = confirm('确定删除该已审批记录吗？');
-                if(!ok) return;
-                // 前端从内存 paymentsData 中移除该记录并刷新页面（不写入服务器）
-                try{
-                  const matchId = docId;
-                  if(!matchId || matchId === '-'){
-                    // 如果没有可用 id，则通过序列化比较进行删除尝试
-                    const before = paymentsData.length;
-                    paymentsData = paymentsData.filter(p => JSON.stringify(p) !== JSON.stringify(it));
-                    const after = paymentsData.length;
-                    renderPage();
-                    paymentsStatus('已从页面移除记录（仅前端）');
-                    return;
-                  }
-                  const idx = paymentsData.findIndex(p => {
-                    const pid = (p && (p._id || p.id)) || (p && p.payload && (p.payload.id || p.payload._id)) || '';
-                    return pid && pid.toString() === matchId.toString();
-                  });
-                  if(idx >= 0){ paymentsData.splice(idx, 1); renderPage(); paymentsStatus('已从页面移除记录（仅前端）'); }
-                  else { // fallback: remove any item whose serialized content equals
-                    paymentsData = paymentsData.filter(p => JSON.stringify(p) !== JSON.stringify(it));
-                    renderPage(); paymentsStatus('已从页面移除记录（仅前端）');
-                  }
-                }catch(e){ alert('删除失败: ' + e.message); }
-              };
-              wrap.appendChild(delBtn);
-            }
-          }catch(e){ /* ignore deletion UI errors */ }
-        }
-        paymentsList.appendChild(wrap);
+            const r = await fetch('/api/admin/payments', { method:'PATCH', headers:{ 'content-type':'application/json', 'x-admin-secret': secret }, body: JSON.stringify({ id: docId, action: 'delete' }) });
+            if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+            await loadPayments();
+          }catch(e){ alert('删除失败: ' + e.message); }
+        };
+        btnRow.appendChild(approve); btnRow.appendChild(reject); btnRow.appendChild(del);
+        row.appendChild(btnRow);
+        listEl.appendChild(row);
       });
-
-      // pagination controls
-      const pager = document.createElement('div');
-      pager.style.marginTop = '8px';
-      const prev = document.createElement('button');
-      prev.textContent = '上一页';
-      prev.disabled = currentPage <= 1;
-      prev.onclick = () => { if(currentPage>1){ currentPage--; renderPage(); } };
-      const next = document.createElement('button');
-      next.textContent = '下一页';
-      next.style.marginLeft = '8px';
-      next.disabled = currentPage >= pageCount;
-      next.onclick = () => { if(currentPage<pageCount){ currentPage++; renderPage(); } };
-      const info = document.createElement('span');
-      info.className = 'small';
-      info.style.marginLeft = '12px';
-      info.textContent = `第 ${currentPage} / ${pageCount} 页 （共 ${total} 条）`;
-      pager.appendChild(prev);
-      pager.appendChild(next);
-      pager.appendChild(info);
-      paymentsList.appendChild(pager);
     }
 
     async function handleAction(id, action, adminNote, amountApprovedUSDT){

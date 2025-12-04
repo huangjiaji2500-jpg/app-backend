@@ -194,8 +194,13 @@ module.exports = async function(req, res){
               }
             });
           } else {
-            // non-approved actions: simple update
-            await targetDoc.ref.update({ payload, updatedAt: now });
+            if(action === 'delete'){
+              // delete the record
+              await targetDoc.ref.delete();
+            } else {
+              // non-approved actions: simple update (e.g., rejected)
+              await targetDoc.ref.update({ payload, updatedAt: now });
+            }
           }
         }catch(e){ console.error('[admin][payments] transaction error', e && (e.stack || e.message)); }
 
