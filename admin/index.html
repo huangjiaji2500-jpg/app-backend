@@ -179,9 +179,9 @@
     });
 
     // Payments review with default pending filter + client-side pagination
-    const paymentsStatus = sel => { $('#paymentsStatus').textContent = sel; };
-    const rawResponseEl = $('#rawResponse');
-    (function(){ const t = $('#toggleRaw'); if(t){ t.onclick = () => { if(!rawResponseEl) return; rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none'; }; } })();
+    const paymentsStatus = sel => { const el = $('#paymentsStatus'); if(el) el.textContent = sel; };
+    const rawResponseEl = $('#rawResponse') || null;
+    (function(){ const t = $('#toggleRaw'); if(t){ if(t.addEventListener) t.addEventListener('click', () => { if(!rawResponseEl) return; rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none'; }); else t.onclick = () => { if(!rawResponseEl) return; rawResponseEl.style.display = (rawResponseEl.style.display === 'none' || !rawResponseEl.style.display) ? 'block' : 'none'; }; } })();
     const paymentsList = $('#paymentsList');
     const filterSelect = $('#filterSelect');
 
@@ -193,12 +193,13 @@
   // 默认只显示待审核项（guard 存在性，避免页面未包含该控件时报错）
   if(filterSelect){
     try{ filterSelect.value = 'pending'; }catch(e){}
-    filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+    if(filterSelect.addEventListener) filterSelect.addEventListener('change', () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); });
+    else filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
   }
 
     async function loadPayments() {
       paymentsStatus('加载中...');
-      paymentsList.innerHTML = '';
+      if(paymentsList) paymentsList.innerHTML = '';
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ paymentsStatus('缺少管理员密钥'); return; }
       try{
