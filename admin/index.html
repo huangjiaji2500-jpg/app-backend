@@ -176,9 +176,11 @@
     let pageSize = 8;
     let currentPage = 1;
 
-  // 默认只显示待审核项
-  filterSelect.value = 'pending';
+  // 默认只显示待审核项（guard 存在性，避免页面未包含该控件时报错）
+  if(filterSelect){
+    try{ filterSelect.value = 'pending'; }catch(e){}
     filterSelect.onchange = () => { currentFilter = filterSelect.value; currentPage = 1; renderPage(); };
+  }
 
     async function loadPayments() {
       paymentsStatus('加载中...');
@@ -365,7 +367,8 @@
       }catch(e){ paymentsStatus('操作失败: ' + e.message); }
     }
 
-    $('#loadPayments').onclick = loadPayments;
+    const loadPaymentsBtn = $('#loadPayments');
+    if(loadPaymentsBtn) loadPaymentsBtn.onclick = loadPayments;
     // 打开用户管理区（滚动到页面内）
     const openBtn = document.getElementById('openUsers');
     if(openBtn) openBtn.onclick = () => { const s = document.getElementById('usersSection'); if(s) s.scrollIntoView({behavior:'smooth'}); };
