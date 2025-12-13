@@ -50,8 +50,8 @@ export default function PaymentMethodAdd(){
   );
 
   return (
-    <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={64}>
-    <ScrollView style={{ flex:1, backgroundColor:colors.background }} contentContainerStyle={{ padding: spacing.md }} keyboardShouldPersistTaps="always" keyboardDismissMode="interactive">
+    <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={64}>
+    <ScrollView style={{ flex:1, backgroundColor:colors.background }} contentContainerStyle={{ padding: spacing.md, paddingBottom: 220 }} keyboardShouldPersistTaps="always" keyboardDismissMode="interactive">
       <Text style={{ fontWeight:'700', marginBottom:8 }}>{t('add_payment_method') || '添加收款方式'}</Text>
 
       {/* 已有的方式（使用普通 View 渲染，避免嵌套可滚动组件导致的焦点问题） */}

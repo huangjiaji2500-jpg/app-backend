@@ -31,7 +31,15 @@ export default function Login({ navigation }) {
         navigation.replace('MainTabs');
       }
     } catch (e) {
-      Alert.alert(t('login_failed') || '登录失败', e.message || t('login_failed_desc') || '请检查用户名或密码');
+      // 记录详细错误供开发排查，但根据错误类型向用户显示更友好的信息（国际化）
+      try { console.error('[Login] authentication error', e && (e.stack || e.message)); } catch (logErr) {}
+      const msg = (e && e.message) ? String(e.message) : '';
+      // 当为密码/用户相关错误时，直接提示凭证错误；其他情况显示通用升级/联系管理员提示
+      if (/密码|用户不存在|不匹配|凭证/.test(msg)) {
+        Alert.alert(t('login_failed') || '登录失败', t('login_failed_desc') || '请检查用户名或密码');
+      } else {
+        Alert.alert(t('login_failed') || '登录失败', t('login_failed_generic') || '登录失败啦～可能是应用版本太旧，麻烦更新到最新版 APP；如果更新后还是不行，联系管理员协助处理哦～');
+      }
     } finally {
       setLoading(false);
     }

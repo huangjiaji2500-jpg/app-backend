@@ -158,7 +158,7 @@ export default function PaymentMethodEdit({ route, navigation }) {
           <Input ref={getInputRef('cardNumber')} label={t('card_number')} placeholder={type==='visa'? '4*************': '5***************'} keyboardType='numeric' value={data.cardNumber||''} onChangeText={v=> setData(p=>({ ...p, cardNumber:v.replace(/\s/g,'') }))} />
           <Input ref={getInputRef('cardHolder')} label={t('card_holder')} placeholder={'JOHN DOE / 山田太郎'} value={data.cardHolder||''} onChangeText={v=> setData(p=>({ ...p, cardHolder:v }))} />
           <Input ref={getInputRef('expiry')} label={t('expiry_date')} placeholder={'MM/YY'} keyboardType='numeric' value={data.expiry||''} onChangeText={v=> setData(p=>({ ...p, expiry:v }))} />
-          <Input ref={getInputRef('cvv')} label={'CVV'} placeholder={'***'} keyboardType='numeric' secure value={data.cvv||''} onChangeText={v=> setData(p=>({ ...p, cvv:v.replace(/\D/g,'').slice(0,3) }))} />
+          <Input ref={getInputRef('cvv')} label={'CVV'} placeholder={'***'} keyboardType='numeric' value={data.cvv||''} onChangeText={v=> setData(p=>({ ...p, cvv:v.replace(/\D/g,'').slice(0,3) }))} />
         </>
       );
     }
@@ -173,8 +173,8 @@ export default function PaymentMethodEdit({ route, navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={64}>
-      <ScrollView style={{ flex:1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.md }} keyboardShouldPersistTaps="always" keyboardDismissMode="interactive">
+    <KeyboardAvoidingView style={{ flex:1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={64}>
+      <ScrollView style={{ flex:1, backgroundColor: colors.background }} contentContainerStyle={{ padding: spacing.md, paddingBottom: 260 }} keyboardShouldPersistTaps="always" keyboardDismissMode="interactive">
       <Text style={{ fontSize:18, fontWeight:'700' }}>{editingId? (t('edit_payment_method')||'编辑支付方式') : (t('add_payment_method')||'添加支付方式')}</Text>
       <View style={{ height:12 }} />
       {/* 使用与安全提示 */}

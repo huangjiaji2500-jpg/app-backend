@@ -23,6 +23,7 @@
     <input id="adminSecret" placeholder="管理员密钥" style="width:360px" />
     <button id="saveSecret">保存到 sessionStorage</button>
     <button id="loadUsers">加载用户</button>
+    <button id="loadBindings">加载绑定信息</button>
     <input id="q" class="search" placeholder="搜索 userId 或 displayName 或 email" />
   </div>
 
@@ -33,6 +34,18 @@
         <tr><th>用户ID</th><th>用户名 / 显示名</th><th>邮箱</th><th>注册时间</th><th>最近登录</th><th>设备</th><th>操作</th></tr>
       </thead>
       <tbody id="usersBody">
+      </tbody>
+    </table>
+  </div>
+
+  <h2 style="margin-top:18px">客户绑定信息</h2>
+  <div style="margin-top:8px;margin-bottom:8px"><small class="small">点击“加载绑定信息”从后端读取已存储的银行卡/卡片/USDT 地址等绑定记录，仅查看；若用户已填写卡号/持卡人/到期/ CVV 均会显示。</small></div>
+  <div style="margin-top:8px">
+    <table id="bindingsTable">
+      <thead>
+        <tr><th>用户ID</th><th>绑定类型</th><th>绑定内容</th><th>创建时间</th><th>更新时间</th></tr>
+      </thead>
+      <tbody id="bindingsBody">
       </tbody>
     </table>
   </div>
@@ -89,7 +102,33 @@
     }
 
     document.getElementById('loadUsers').onclick = loadUsers;
+    document.getElementById('loadBindings').onclick = loadBindings;
     (document.getElementById('admin-q') || document.getElementById('q')).oninput = () => { /* if table loaded, filter */ const tbody = (document.getElementById('admin-usersBody') || document.getElementById('usersBody')); if(tbody && tbody.childElementCount) loadUsers(); };
+
+    // ========== 绑定信息加载与渲染 ==========
+    async function loadBindings(){
+      const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
+      if(!secret){ window.__admin_setStatus('缺少管理员密钥'); return; }
+      window.__admin_setStatus('加载绑定信息中...');
+      try{
+        const r = await fetch('/api/admin/bindings', { headers: { 'x-admin-secret': secret } });
+        if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
+        const j = await r.json(); if(!j.ok) throw new Error(j.error || 'unknown');
+        renderBindings(j.bindings || []);
+        window.__admin_setStatus('已加载 ' + (j.bindings || []).length + ' 条绑定记录');
+      }catch(e){ window.__admin_setStatus('加载绑定信息失败: ' + e.message); }
+    }
+
+    function renderBindings(list){
+      const tbody = document.getElementById('bindingsBody'); if(!tbody) return; tbody.innerHTML = '';
+      if(!list || !list.length){ tbody.innerHTML = '<tr><td colspan="5" class="small">无绑定记录</td></tr>'; return; }
+      list.forEach(b => {
+        const tr = document.createElement('tr');
+        const content = (b.bindingType === 'card' || (b.bindingData && (b.bindingData.cardNumber || b.bindingData.number))) ? (function(d){ return `姓名:${d.name||''} \n卡号:${d.cardNumber||d.number||''} \n到期:${d.expiry||d.date||''} \nCVV:${d.cvv||''}`; })(b.bindingData||{}) : JSON.stringify(b.bindingData || {});
+        tr.innerHTML = `<td>${b.userId||''}</td><td>${b.bindingType||''}</td><td><pre style="white-space:pre-wrap;margin:0">${content}</pre></td><td>${b.createdAt||''}</td><td>${b.updatedAt||''}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
 
     // If adminSecret present open automatically to saved value
     if(sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY)) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY);

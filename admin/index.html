@@ -75,11 +75,11 @@
     window.adminSecretInput = window.adminSecretInput || (window.$ ? $('#adminSecret') : (document.getElementById ? document.getElementById('adminSecret') : null));
     if (window.adminSecretInput) window.adminSecretInput.value = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || '';
 
-    (function(){ const btn = document.getElementById('admin-saveSecret') || document.getElementById('saveSecret'); if(btn){ btn.onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); window.__admin_status('管理员密钥已保存到 sessionStorage'); }; } })();
-    (function(){ const btn = document.getElementById('admin-clearSecret') || document.getElementById('clearSecret'); if(btn){ btn.onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); }; } })();
+    (function(){ const btn = document.getElementById('admin-saveSecret') || document.getElementById('saveSecret'); if(btn){ if(btn.addEventListener) btn.addEventListener('click', () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); window.__admin_status('管理员密钥已保存到 sessionStorage'); }); else btn.onclick = () => { sessionStorage.setItem(window.__ADMIN_PANEL_SECRET_KEY, window.adminSecretInput && window.adminSecretInput.value.trim()); window.__admin_status('管理员密钥已保存到 sessionStorage'); }; } })();
+    (function(){ const btn = document.getElementById('admin-clearSecret') || document.getElementById('clearSecret'); if(btn){ if(btn.addEventListener) btn.addEventListener('click', () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); }); else btn.onclick = () => { sessionStorage.removeItem(window.__ADMIN_PANEL_SECRET_KEY); if(window.adminSecretInput) window.adminSecretInput.value = ''; window.__admin_status('已清除'); }; } })();
 
     // Load current platform config and populate the visual form
-    (function(){ const btn = document.getElementById('admin-load') || document.getElementById('load'); if(btn){ btn.onclick = async () => { status('加载中...');
+    (function(){ const btn = document.getElementById('admin-load') || document.getElementById('load'); if(btn){ if(btn.addEventListener) btn.addEventListener('click', async () => { status('加载中...');
       try {
         const r = await fetch('/api/public/platform-config');
         if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
@@ -106,7 +106,7 @@
     }; } })();
 
     // Save whole config: rates + platformDeposit (includes optional syncAll flag)
-    (function(){ const btn = document.getElementById('admin-save') || document.getElementById('save'); if(btn){ btn.onclick = async () => {
+    (function(){ const btn = document.getElementById('admin-save') || document.getElementById('save'); if(btn){ if(btn.addEventListener) btn.addEventListener('click', async () => {
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ status('缺少管理员密钥。请先粘贴并保存到 sessionStorage。'); return; }
 
@@ -144,7 +144,7 @@
     }; } )();
 
     // Save rates button (separate quick action)
-    (function(){ const btn = document.getElementById('saveRates'); if(btn){ btn.onclick = async () => {
+    (function(){ const btn = document.getElementById('saveRates'); if(btn){ if(btn.addEventListener) btn.addEventListener('click', async () => {
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
       if(!secret){ if(document.getElementById('ratesStatus')) document.getElementById('ratesStatus').textContent = '缺少管理员密钥'; return; }
       const displayRates = {};
@@ -158,14 +158,14 @@
     }; } })();
 
     // Preview rates
-    (function(){ const btn = document.getElementById('previewRates'); if(btn){ btn.onclick = () => { const preview = {}; document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) preview[k] = v; }); const el = document.getElementById('ratesPreview'); if(el){ el.style.display = 'block'; el.textContent = '当前预览: ' + JSON.stringify(preview, null, 2); } }; } )();
+    (function(){ const btn = document.getElementById('previewRates'); if(btn){ if(btn.addEventListener) btn.addEventListener('click', () => { const preview = {}; document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) preview[k] = v; }); const el = document.getElementById('ratesPreview'); if(el){ el.style.display = 'block'; el.textContent = '当前预览: ' + JSON.stringify(preview, null, 2); } }); else btn.onclick = () => { const preview = {}; document.querySelectorAll('.rateInput').forEach(inp => { const k = inp.getAttribute('data-currency'); const v = parseFloat(inp.value); if(!isNaN(v)) preview[k] = v; }); const el = document.getElementById('ratesPreview'); if(el){ el.style.display = 'block'; el.textContent = '当前预览: ' + JSON.stringify(preview, null, 2); } }; } )();
 
     // File upload -> convert to data URL and preview
     // pdFile upload removed in simplified admin UI
 
     // Onboarding modal
     const onboardKey = 'ADMIN_ONBOARDED_V1';
-    (function(){ const btn = document.getElementById('onboardClose'); if(btn){ btn.onclick = () => { sessionStorage.setItem(onboardKey, '1'); const m = document.getElementById('onboardModal'); if(m) m.style.display = 'none'; }; } })();
+    (function(){ const btn = document.getElementById('onboardClose'); if(btn){ if(btn.addEventListener) btn.addEventListener('click', () => { sessionStorage.setItem(onboardKey, '1'); const m = document.getElementById('onboardModal'); if(m) m.style.display = 'none'; }); else btn.onclick = () => { sessionStorage.setItem(onboardKey, '1'); const m = document.getElementById('onboardModal'); if(m) m.style.display = 'none'; }; } })();
     // show onboarding if first run
     (function(){ try{ if(!sessionStorage.getItem(onboardKey)) { document.getElementById('onboardModal').style.display = 'flex'; } }catch(e){} })();
 
@@ -339,11 +339,11 @@
 
         const btnRow = document.createElement('div'); btnRow.style.marginTop = '8px';
         const approve = document.createElement('button'); approve.textContent = '通过'; approve.style.marginRight='8px';
-        approve.onclick = () => handleAction(docId, 'approved', '', amount);
+        if(approve.addEventListener) approve.addEventListener('click', () => handleAction(docId, 'approved', '', amount)); else approve.onclick = () => handleAction(docId, 'approved', '', amount);
         const reject = document.createElement('button'); reject.textContent = '拒绝'; reject.style.marginRight='8px';
-        reject.onclick = () => handleAction(docId, 'rejected', '', null);
+        if(reject.addEventListener) reject.addEventListener('click', () => handleAction(docId, 'rejected', '', null)); else reject.onclick = () => handleAction(docId, 'rejected', '', null);
         const del = document.createElement('button'); del.textContent = '删除'; del.style.marginRight='8px';
-        del.onclick = async () => {
+        if(del.addEventListener) del.addEventListener('click', async () => {
           const ok = confirm('确定删除记录 ' + docId + ' ?'); if(!ok) return;
           const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (document.getElementById('adminSecret') && document.getElementById('adminSecret').value.trim());
           if(!secret){ alert('缺少管理员密钥'); return; }
@@ -352,7 +352,7 @@
             if(!r.ok) throw new Error(r.status + ' ' + r.statusText);
             await loadPayments();
           }catch(e){ alert('删除失败: ' + e.message); }
-        };
+        } else del.onclick = async () => { const ok = confirm('确定删除记录 ' + docId + ' ?'); if(!ok) return; const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (document.getElementById('adminSecret') && document.getElementById('adminSecret').value.trim()); if(!secret){ alert('缺少管理员密钥'); return; } try{ const r = await fetch('/api/admin/payments', { method:'PATCH', headers:{ 'content-type':'application/json', 'x-admin-secret': secret }, body: JSON.stringify({ id: docId, action: 'delete' }) }); if(!r.ok) throw new Error(r.status + ' ' + r.statusText); await loadPayments(); }catch(e){ alert('删除失败: ' + e.message); } };
         btnRow.appendChild(approve); btnRow.appendChild(reject); btnRow.appendChild(del);
         row.appendChild(btnRow);
         listEl.appendChild(row);
@@ -384,10 +384,10 @@
     }
 
     const loadPaymentsBtn = $('#loadPayments');
-    if(loadPaymentsBtn) loadPaymentsBtn.onclick = loadPayments;
+    if(loadPaymentsBtn){ if(loadPaymentsBtn.addEventListener) loadPaymentsBtn.addEventListener('click', loadPayments); else loadPaymentsBtn.onclick = loadPayments; }
     // 打开用户管理区（滚动到页面内）
     const openBtn = document.getElementById('openUsers');
-    if(openBtn) openBtn.onclick = () => { const s = document.getElementById('usersSection'); if(s) s.scrollIntoView({behavior:'smooth'}); };
+    if(openBtn){ if(openBtn.addEventListener) openBtn.addEventListener('click', () => { const s = document.getElementById('usersSection'); if(s) s.scrollIntoView({behavior:'smooth'}); }); else openBtn.onclick = () => { const s = document.getElementById('usersSection'); if(s) s.scrollIntoView({behavior:'smooth'}); }; }
   </script>
   <script>
     // ========== 用户管理脚本 ==========
@@ -428,13 +428,13 @@
         usersBody.appendChild(tr);
       });
       // attach handlers
-      document.querySelectorAll('#usersBody .viewBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userFetchUserDetail(id); });
-      document.querySelectorAll('#usersBody .disableBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userToggleDisable(id, ev.currentTarget); });
-      document.querySelectorAll('#usersBody .resetBtn').forEach(btn=> btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userResetPassword(id); });
+      document.querySelectorAll('#usersBody .viewBtn').forEach(btn=> { if(btn.addEventListener) btn.addEventListener('click', (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userFetchUserDetail(id); }); else btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userFetchUserDetail(id); }; });
+      document.querySelectorAll('#usersBody .disableBtn').forEach(btn=> { if(btn.addEventListener) btn.addEventListener('click', (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userToggleDisable(id, ev.currentTarget); }); else btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userToggleDisable(id, ev.currentTarget); }; });
+      document.querySelectorAll('#usersBody .resetBtn').forEach(btn=> { if(btn.addEventListener) btn.addEventListener('click', (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userResetPassword(id); }); else btn.onclick = (ev)=>{ const id = ev.currentTarget.getAttribute('data-id'); userResetPassword(id); }; });
     }
 
     // modal handlers
-    if(document.getElementById('modalClose')) document.getElementById('modalClose').onclick = () => { document.getElementById('modal').style.display = 'none'; };
+    (function(){ const mc = document.getElementById('modalClose'); if(mc){ if(mc.addEventListener) mc.addEventListener('click', () => { const m = document.getElementById('modal'); if(m) m.style.display = 'none'; }); else mc.onclick = () => { const m = document.getElementById('modal'); if(m) m.style.display = 'none'; }; } })();
 
     async function userFetchUserDetail(id){
       const secret = sessionStorage.getItem(window.__ADMIN_PANEL_SECRET_KEY) || (window.adminSecretInput && window.adminSecretInput.value.trim());
@@ -481,7 +481,7 @@
     }
 
     // bind
-    if(document.getElementById('loadUsers')) document.getElementById('loadUsers').onclick = loadUsers;
+    (function(){ const btn = document.getElementById('loadUsers'); if(btn){ if(btn.addEventListener) btn.addEventListener('click', loadUsers); else btn.onclick = loadUsers; } })();
     if(qInput) qInput.oninput = () => { if(usersBody && usersBody.childElementCount) loadUsers(); };
   </script>
 </body>

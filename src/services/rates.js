@@ -7,8 +7,10 @@ const DEFAULT_RATE = 1.00; // 仅用于影响商家 unitPrice 的乘子
 // 新展示用多币种比例 KEY
 const KEY_DISPLAY_RATES = 'PLATFORM_DISPLAY_RATES_V1'; // 存 JSON {USD,CNY,KRW,JPY}
 // 默认展示比例（1 USDT = ? 目标货币）——打包时内置默认值（可在后台后续覆盖）
-// 按客户要求初始值：USD=1.2, CNY=9, KRW=1860, JPY=198
-const DEFAULT_DISPLAY_RATES = { USD:1.2, CNY:9, KRW:1860, JPY:198 };
+// 初始默认展示比例：调整为 1 USDT = 7.5 CNY，其他币种按原比例缩放（与 RMB 保持同等比例）
+// 计算基于原默认: USD=1.2, CNY=9, KRW=1860, JPY=198 -> scale = 7.5/9 = 0.833333...
+// 结果四舍五入到合理精度： USD=1.0, CNY=7.5, KRW=1550, JPY=165
+const DEFAULT_DISPLAY_RATES = { USD:1.3, CNY:7.5, KRW:1550, JPY:165 };
 
 // 是否使用展示 USD 比例影响商家定价（默认开启以满足“需要影响商家定价”的新需求）
 const KEY_USE_DISPLAY_USD_FOR_PRICING = 'USE_DISPLAY_USD_FOR_PRICING';

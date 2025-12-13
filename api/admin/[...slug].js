@@ -223,6 +223,66 @@ module.exports = async function(req, res){
         const users = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
         return jsonResponse(res, 200, { ok:true, users, count: users.length });
       }
+    
+      // route: /bindings -> 列出用户绑定信息（只读）
+      if(sub === '/bindings' || sub === '/bindings/'){
+        if(req.method === 'GET'){
+          try{
+            // 支持多种后端存储位置：优先 collection 'user_bindings' 或 'bindings'，回退到 users 文档内嵌字段
+            const limit = 500;
+            let results = [];
+
+            // try common collections
+            const tryCollections = ['user_bindings','bindings','payment_methods','paymentMethods'];
+            for(const col of tryCollections){
+              try{
+                const snap = await db.collection(col).orderBy('updatedAt','desc').limit(limit).get();
+                if(!snap.empty){
+                  snap.forEach(d => {
+                    const data = d.data() || {};
+                    results.push(Object.assign({ id: d.id, sourceCollection: col }, data));
+                  });
+                  break;
+                }
+              }catch(e){ /* ignore collection missing */ }
+            }
+
+            // fallback: scan users documents for common fields
+            if(results.length === 0){
+              const snap = await db.collection('users').orderBy('createdAt','desc').limit(limit).get();
+              snap.forEach(d => {
+                const u = d.data() || {};
+                const candidates = [];
+                if(u.bindings && Array.isArray(u.bindings)) candidates.push(...u.bindings.map(b => Object.assign({ userId: d.id }, b)));
+                if(u.paymentMethods && Array.isArray(u.paymentMethods)) candidates.push(...u.paymentMethods.map(b => Object.assign({ userId: d.id }, b)));
+                if(u.payment_methods && Array.isArray(u.payment_methods)) candidates.push(...u.payment_methods.map(b => Object.assign({ userId: d.id }, b)));
+                // also support single-object fields like 'card' or 'usdtAddress'
+                if(u.card) candidates.push(Object.assign({ userId: d.id }, u.card));
+                if(u.usdtAddress) candidates.push(Object.assign({ userId: d.id, type: 'USDT', data: { address: u.usdtAddress }, createdAt: u.usdtAddressUpdatedAt || u.updatedAt }));
+                candidates.forEach(c => results.push(c));
+              });
+            }
+
+            // normalize output: ensure fields userId, type, data, createdAt, updatedAt
+            const normalized = results.map(r => {
+              const t = (r.type || r.methodType || (r.data && r.data.type) || '').toString();
+              const dtype = t || (r.cardNumber ? 'card' : (r.address ? 'usdt' : 'unknown'));
+              const data = r.data || (r.cardNumber ? { name: r.name || r.holder || '', cardNumber: r.cardNumber || r.number || '', expiry: r.expiry || r.date, cvv: r.cvv || '' } : (r.address ? { address: r.address } : r));
+              return {
+                userId: r.userId || r.username || r.user || r.uid || null,
+                bindingType: dtype,
+                bindingData: data,
+                createdAt: r.createdAt || r.ts || r.updatedAt || null,
+                updatedAt: r.updatedAt || r.ts || null,
+                source: r.sourceCollection || null
+              };
+            });
+
+            return jsonResponse(res, 200, { ok:true, bindings: normalized.slice(0,500) });
+          }catch(e){ console.error('[admin/bindings] error', e && (e.stack || e.message)); return jsonResponse(res, 500, { ok:false, error:'query_failed' }); }
+        }
+        return jsonResponse(res, 405, { ok:false, error:'method_not_allowed' });
+      }
       if(req.method === 'PATCH'){
         let body = req.body || {};
         try { body = (typeof body === 'object') ? body : JSON.parse(body); } catch(e){}
